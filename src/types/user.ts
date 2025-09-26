@@ -12,6 +12,7 @@ export interface IUser extends Document {
   userGameDetails: mongoose.Types.ObjectId[];
   isActive: boolean;
   tags: string[];
+  notifications:any;
   referralCode?: string;
   referrals?: string[];
   pendingReferrals?: number;

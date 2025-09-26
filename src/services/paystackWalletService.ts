@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export class PaystackTransferService {
+export class PaystackWalletService {
   private static readonly BASE_URL = "https://api.paystack.co";
   private static readonly SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
@@ -39,7 +39,7 @@ export class PaystackTransferService {
   }
 
   // Step 2: Initiate transfer to user
-  static async initiateTransfer(
+  static async initializeTransaction(
     amount: number,
     recipientCode: string,
     reason: string = "Wallet withdrawal",
@@ -73,7 +73,7 @@ export class PaystackTransferService {
   }
 
   // Step 3: Verify transfer status
-  static async verifyTransfer(transferCode: string) {
+  static async verifyTransaction(transferCode: string) {
     const url = `${this.BASE_URL}/transfer/verify/${transferCode}`;
 
     try {

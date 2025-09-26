@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Wallet } from "../../models/Wallet";
-import { PaystackTransferService } from "../../services/paystackWalletService";
+import { PaystackWalletService } from "../../services/paystackWalletService";
 
 // Updated debit wallet function
 export const debitWallet = async (req: Request, res: Response) => {
@@ -34,7 +34,7 @@ export const debitWallet = async (req: Request, res: Response) => {
 
     try {
       // Step 1: Verify the account number first
-      const accountVerification = await PaystackTransferService.verifyAccount(
+      const accountVerification = await PaystackWalletService.verifyAccount(
         account_number, 
         bank_code
       );
@@ -49,7 +49,7 @@ export const debitWallet = async (req: Request, res: Response) => {
       console.log('Account verified:', accountVerification.data);
 
       // Step 2: Create transfer recipient
-      const recipient = await PaystackTransferService.createTransferRecipient(
+      const recipient = await PaystackWalletService.createTransferRecipient(
         account_name,
         account_number,
         bank_code
@@ -65,7 +65,7 @@ export const debitWallet = async (req: Request, res: Response) => {
       console.log('Recipient created:', recipient.data);
 
       // Step 3: Initiate the transfer
-      const transfer = await PaystackTransferService.initiateTransfer(
+      const transfer = await PaystackWalletService.initializeTransaction(
         amount,
         recipient.data.recipient_code,
         reason,
@@ -127,7 +127,7 @@ export const checkTransferStatus = async (req: Request, res: Response) => {
   try {
     const { transferCode } = req.params;
 
-    const transferStatus = await PaystackTransferService.verifyTransfer(transferCode);
+    const transferStatus = await PaystackWalletService.verifyTransaction(transferCode);
 
     res.json(transferStatus);
   } catch (error: any) {
@@ -138,7 +138,7 @@ export const checkTransferStatus = async (req: Request, res: Response) => {
 // Function to get supported banks
 export const getSupportedBanks = async (req: Request, res: Response) => {
   try {
-    const banks = await PaystackTransferService.getBanks();
+    const banks = await PaystackWalletService.getBanks();
     res.json(banks);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -170,7 +170,7 @@ export const verifyAccount = async (req: Request, res: Response) => {
   try {
     const { accountNumber, bankCode } = req.body;
 
-    const verification = await PaystackTransferService.verifyAccount(accountNumber, bankCode);
+    const verification = await PaystackWalletService.verifyAccount(accountNumber, bankCode);
     
     res.json(verification);
   } catch (error: any) {
