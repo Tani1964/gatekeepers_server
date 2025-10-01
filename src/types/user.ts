@@ -22,6 +22,14 @@ export interface IUser extends Document {
   wallet?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  pushToken?: string | null;
+  pushTokens?: { token: string; device: string; lastUsed: Date }[];
+  notificationPreferences?: {
+    enabled: boolean;
+    gameStart: boolean;
+    gameEnd: boolean;
+    friendActivity: boolean;
+  };
 
 
   initials: string;

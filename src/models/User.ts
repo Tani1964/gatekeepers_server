@@ -84,6 +84,33 @@ const userSchema = new Schema<IUser>(
         trim: true,
       },
     ],
+      pushToken: {
+    type: String,
+    default: null,
+  },
+  pushTokens: [{
+    token: String,
+    device: String,
+    lastUsed: Date,
+  }],
+  notificationPreferences: {
+    enabled: {
+      type: Boolean,
+      default: true,
+    },
+    gameStart: {
+      type: Boolean,
+      default: true,
+    },
+    gameEnd: {
+      type: Boolean,
+      default: true,
+    },
+    friendActivity: {
+      type: Boolean,
+      default: true,
+    },
+  },
   },
   {
     timestamps: true,

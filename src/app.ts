@@ -4,8 +4,10 @@ import authRoute from "./routers/authRouter";
 import gameAdminRouter from './routers/gameAdminRouter';
 import gameRouter from './routers/gameRouter';
 import healthRoute from "./routers/health";
+import notificationRoutes from './routers/notificationRoutes';
 import userRouter from "./routers/userRouter";
 import walletRouter from "./routers/walletRouter";
+
 var cors = require('cors')
 
 const app = express();
@@ -22,5 +24,7 @@ app.use('/games', gameRouter);
 app.use('/admin', gameAdminRouter);
 app.use('/wallet', walletRouter);
 app.use('/users', userRouter);
+app.use('/api/notifications', notificationRoutes);
+
 
 export default app;

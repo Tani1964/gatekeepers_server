@@ -1,3 +1,6 @@
+
+
+// controllers/auth/authController.ts
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../../models/User';
@@ -8,39 +11,39 @@ const otpService = new OTPService();
 
 export class AuthController {
 
- async register(req: any, res: any) {
-  try {
-    const { email, name, age, password, phoneNumber } = req.body;
-    
-    // Log incoming data
-    console.log('Registration attempt:', { email, name, age, phoneNumber });
+  async register(req: any, res: any) {
+    try {
+      const { email, name, age, password, phoneNumber } = req.body;
+      
+      // Log incoming data
+      console.log('Registration attempt:', { email, name, age, phoneNumber });
 
-    const existingUser = await User.findByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+      const existingUser = await User.findByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: 'User already exists' });
+      }
+
+      const newUser = new User({
+        email,
+        name,
+        age,
+        phoneNumber,
+        profileImage: 'null', // Default empty string
+        passwordHash: await bcrypt.hash(password, 10),
+      });
+      
+      console.log('User object created:', newUser);
+      
+      await newUser.save();
+      await createWallet(newUser, "");
+      console.log('User saved successfully:', newUser);
+
+      res.status(201).json({ message: 'User registered successfully' });
+    } catch (error) {
+      console.error('Registration error details:', error);
+      res.status(500).json({ error: 'Registration failed', details: error });
     }
-
-    const newUser = new User({
-      email,
-      name,
-      age,
-      phoneNumber,
-      profileImage: 'null', // Default empty string
-      passwordHash: await bcrypt.hash(password, 10),
-    });
-    
-    console.log('User object created:', newUser);
-    
-    await newUser.save();
-    await createWallet(newUser, "");
-    console.log('User saved successfully:', newUser);
-
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (error) {
-    console.error('Registration error details:', error); // Add this line
-    res.status(500).json({ error: 'Registration failed', details: error });
   }
-}
 
   async initiateLogin(req: any, res: any) {
     try {
@@ -60,6 +63,7 @@ export class AuthController {
       });
       
     } catch (error) {
+      console.error('Login initiation error:', error);
       res.status(500).json({ error: 'Login failed' });
     }
   }
@@ -68,14 +72,17 @@ export class AuthController {
     try {
       const { email, otp } = req.body;
       console.log(email, otp);
+      
       const otpResult = await otpService.verifyOTP(email, otp, 'login');
       console.log(otpResult.success);
+      
       if (!otpResult.success) {
         return res.status(401).json({ error: otpResult.message });
       }
       
       const user = await User.findOne({ email });
       console.log(user);
+      
       const token = jwt.sign(
         { userId: user!._id, email: user!.email },
         process.env.JWT_SECRET!,
@@ -90,6 +97,7 @@ export class AuthController {
       });
       
     } catch (error) {
+      console.error('Login completion error:', error);
       res.status(500).json({ error: 'OTP verification failed' });
     }
   }
@@ -122,11 +130,11 @@ export class AuthController {
       });
       
     } catch (error) {
+      console.error('Sensitive OTP request error:', error);
       res.status(500).json({ error: 'Failed to send OTP' });
     }
   }
   
-
   async verifySensitiveOTP(req: any, res: any) {
     try {
       const { otp } = req.body;
@@ -142,6 +150,7 @@ export class AuthController {
       res.json({ message: 'OTP verified, proceed with operation' });
       
     } catch (error) {
+      console.error('Sensitive OTP verification error:', error);
       res.status(500).json({ error: 'OTP verification failed' });
     }
   }

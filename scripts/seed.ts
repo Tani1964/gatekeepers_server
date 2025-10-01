@@ -7,7 +7,9 @@ import { UserGameDetails } from '../src/models/UserGameDetails';
 import { Wallet } from '../src/models/Wallet';
 
 // Database connection
-const MONGODB_URI: string = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/gatekeepers?directConnection=true&serverSelectionTimeoutMS=2000&appName=gatekeepers';
+// const MONGODB_URI: string = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/gatekeepers?directConnection=true&serverSelectionTimeoutMS=2000&appName=gatekeepers';
+
+const MONGODB_URI='mongodb+srv://admin:4yhs7Qvc9AZvoEdB@gatekeepers-proddb.yawvn9r.mongodb.net/?retryWrites=true&w=majority&appName=gatekeepers-prodDBv'
 
 // Types for seed data
 interface SeedUser {
