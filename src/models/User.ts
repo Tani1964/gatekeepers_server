@@ -30,6 +30,11 @@ const userSchema = new Schema<IUser>(
       required: [true, "Profile image is required"],
       trim: true,
     },
+    profileImagePublicId: {
+      type: String,
+      required: false,
+      trim: true,
+    },
     role: {
       type: String,
       enum: ["user", "admin"],

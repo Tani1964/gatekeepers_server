@@ -74,7 +74,7 @@ const sampleUsers: SeedUser[] = [
   {
     name: 'John Doe',
     phoneNumber: '+1234567890',
-    email: 'john@example.com',
+    email: 'ifegbesan6@gmail.com',
     role: 'user',
     eyes: 150,
     age: 28,

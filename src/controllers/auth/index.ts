@@ -14,11 +14,12 @@ export class AuthController {
   async register(req: any, res: any) {
     try {
       const { email, name, age, password, phoneNumber } = req.body;
-      
+  
+    
       // Log incoming data
-      console.log('Registration attempt:', { email, name, age, phoneNumber });
-
+      
       const existingUser = await User.findByEmail(email);
+      console.log('Registration attempt:', { email, name, age, phoneNumber });
       if (existingUser) {
         return res.status(400).json({ error: 'User already exists' });
       }
@@ -31,9 +32,9 @@ export class AuthController {
         profileImage: 'null', // Default empty string
         passwordHash: await bcrypt.hash(password, 10),
       });
+      console.log('User object created:k', newUser);
       
-      console.log('User object created:', newUser);
-      
+      // User.create(newUser);
       await newUser.save();
       await createWallet(newUser, "");
       console.log('User saved successfully:', newUser);

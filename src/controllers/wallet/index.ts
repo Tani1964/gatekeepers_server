@@ -3,25 +3,29 @@ import mongoose from "mongoose";
 import { Wallet } from "../../models/Wallet";
 
 // ✅ Create wallet for a user (called on signup usually)
-export const createWallet = async (req: any, res: any) => {
+export const createWallet = async (user:any,data:String) => {
     try {
-        console.log("Get transaction")
+        console.log("Get transaction, user:", user);
       // Check if wallet already exists
-      const existingWallet = await Wallet.findOne({ userId: req.params.id });
+      const existingWallet = await Wallet.findOne({ userId: user.id });
       if (existingWallet) {
-        return res.status(400).json({ error: "Wallet already exists" });
+        // return res.status(400).json({ error: "Wallet already exists" });
+        console.log("Wallet already exists for user:", user.id);
+        return existingWallet;
       }
 
       const wallet = new Wallet({
-        userId: req.user.id,
+        userId: user.id,
         balance: 1000,
         transactions: [],
       });
       await wallet.save();
-      res.status(201).json({ wallet });
+      // res.status(201).json({ wallet });
+      return wallet;
     } catch (error) {
       console.error("Create wallet error:", error);
-      res.status(500).json({ error: "Failed to create wallet" });
+      // res.status(500).json({ error: "Failed to create wallet" });
+      return null;
     }
   }
 

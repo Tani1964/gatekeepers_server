@@ -10,7 +10,7 @@ const router = Router();
 // router.use(authMiddleware);
 
 // Wallet operations
-router.post("/create", createWallet);
+// router.post("/create", createWallet);
 
 // Transactions
 router.get("/transactions", getTransactions);

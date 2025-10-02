@@ -4,6 +4,7 @@ import authRoute from "./routers/authRouter";
 import gameAdminRouter from './routers/gameAdminRouter';
 import gameRouter from './routers/gameRouter';
 import healthRoute from "./routers/health";
+import imageRoutes from './routers/imageRoutes';
 import notificationRoutes from './routers/notificationRoutes';
 import userRouter from "./routers/userRouter";
 import walletRouter from "./routers/walletRouter";
@@ -25,6 +26,7 @@ app.use('/admin', gameAdminRouter);
 app.use('/wallet', walletRouter);
 app.use('/users', userRouter);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/images', imageRoutes);
 
 
 export default app;

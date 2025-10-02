@@ -4,6 +4,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   profileImage?: string;
+  profileImagePublicId?: string;
   age?: number;
   passwordHash: string;
   eyes: number;
