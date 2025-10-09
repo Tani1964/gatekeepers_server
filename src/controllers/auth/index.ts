@@ -54,6 +54,7 @@ export class AuthController {
       if (!user || !await bcrypt.compare(password, user.passwordHash)) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
+      console.log("Login initiated")
       
       await otpService.createOTP(email, 'login');
       

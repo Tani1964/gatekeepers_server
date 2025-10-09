@@ -21,11 +21,11 @@ export class UserController {
 
   async updateUser(req: any, res: any) {
     const userId = req.params.id;
-    const { name, email } = req.body;
+    const { name, email,phoneNumber, profileImage } = req.body;
 
     const user = await User.findByIdAndUpdate(
       userId,
-      { name, email, updatedAt: new Date() },
+      { name, email,phoneNumber,profileImage, updatedAt: new Date() },
       { new: true }
     );
 

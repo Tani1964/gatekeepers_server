@@ -17,12 +17,14 @@ export class OTPService {
   }
 
   async createOTP(email: string, type: string): Promise<void> {
+    console.log(`Creating OTP for ${email} of type ${type}`);
     const otp = this.generateOTP();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    console.log(`Generated OTP: ${otp}, expires at: ${expiresAt}`);
 
     // Store OTP
     this.otpStore.set(`${email}:${type}`, { otp, expiresAt, type });
-
+    console.log(`Stored OTP for ${email}:${type}`);
     // Send OTP via email using Resend
     await this.sendOTPEmail(email, otp, type);
 
@@ -33,6 +35,7 @@ export class OTPService {
     try {
       let subject = 'Your OTP Code';
       let message = '';
+      console.log(email)
 
       switch (type) {
         case 'login':
