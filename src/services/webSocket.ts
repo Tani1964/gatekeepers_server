@@ -390,6 +390,4 @@ function handleChatMessage(data: any, broadcast: Function) {
     broadcast(response);
 }
 
-module.exports = {
-    initializeWs
-};
+export { initializeWs };

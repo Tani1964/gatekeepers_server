@@ -9,7 +9,7 @@ import imageRoutes from './routers/imageRoutes';
 import notificationRoutes from './routers/notificationRoutes';
 import userRouter from "./routers/userRouter";
 import walletRouter from "./routers/walletRouter";
-const { initializeWs } = require('../src/services/webSocket'); 
+import { initializeWs } from './services/webSocket';
 var cors = require('cors')
 
 const app = express();
