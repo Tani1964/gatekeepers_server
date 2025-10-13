@@ -7,6 +7,9 @@ export interface IGame extends Document {
   durationInMinutes: number;
   players: mongoose.Types.ObjectId[];
   connectedUsers: number;
+  connectedUsersArray?: string[]; // Optional array to track connected user IDs
+  readyUsers: number;
+  readyUsersArray?: string[]; // Optional array to track ready user IDs
   friends: string[];
   enemies: string[];
   friendDescription?: string;

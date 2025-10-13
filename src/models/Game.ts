@@ -58,6 +58,18 @@ const GameSchema = new Schema<IGame>(
       type: Number,
       default: 0,
     },
+    connectedUsersArray: {
+      type: [String],
+      default: [],
+    },
+    readyUsers: {
+      type: Number,
+      default: 0,
+    },
+    readyUsersArray: {
+      type: [String],
+      default: [],
+    },
     price: {
       type: Number,
       required: true,

@@ -5,27 +5,24 @@ export class GameController {
   async getUpcomingGames(req: any, res: any) {
     try {
       const now = new Date();
-      const todayString = now.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+      const todayString = now.toISOString().split("T")[0];
 
       console.log("Current date/time:", now);
       console.log("Today as string:", todayString);
 
-      // Since startDate is stored as string, we need to compare strings
-      // Get all upcoming games, sorted by start date (closest first)
       const games = await Game.find({
         startDate: { $gte: todayString },
-      }).sort({ startDate: 1 }); // Sort ascending to get closest first
+      }).sort({ startDate: 1 });
 
       console.log("Upcoming games found:", games.length);
       console.log("Query criteria - looking for startDate >= ", todayString);
 
-      // The closest game is always the first one in the sorted array
       const closestGame = games.length > 0 ? games[0] : null;
 
       res.status(200).json({
         success: true,
-        data: games, // All games sorted with closest first
-        closestGame: closestGame, // Explicitly provide the closest game
+        data: games,
+        closestGame: closestGame,
         hasGames: games.length > 0,
       });
     } catch (error) {
@@ -41,12 +38,13 @@ export class GameController {
     try {
       console.log("Fetching past games for user", req.user);
       const userId = req.user.id;
-      const todayString = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+      const todayString = new Date().toISOString().split("T")[0];
 
       const games = await Game.find({
         players: userId,
         startDate: { $lt: todayString },
-      }).sort({ startDate: -1 }); // Most recent first
+      }).sort({ startDate: -1 });
+      
       const user = await User.findById(userId);
 
       if (!user) {
@@ -55,7 +53,6 @@ export class GameController {
           message: "User not found",
         });
       }
-      // await user.updateOne({ monthlyDurationPlayed: user.monthlyDurationPlayed+, yearlyDurationPlayed: 0 });
 
       res.status(200).json({
         success: true,
@@ -83,14 +80,6 @@ export class GameController {
         });
       }
 
-      // Uncomment if you want to restrict access to players only
-      // if (!game?.players.includes(id)) {
-      //   return res.status(403).json({
-      //     success: false,
-      //     message: "You are not a player in this game",
-      //   });
-      // }
-
       res.status(200).json({
         success: true,
         data: game,
@@ -108,13 +97,11 @@ export class GameController {
     try {
       console.log("Submit score request body:", req.body);
 
-      // Extract data from request body (not params)
       const { user, game, gameId, score } = req.body;
       const userId = user?.id;
 
       console.log("Submitting score for user:", userId, "Score:", score);
       console.log("Game ID:", gameId);
-      console.log("Game data:", game);
 
       // Validate required fields
       if (!userId) {
@@ -148,26 +135,15 @@ export class GameController {
         });
       }
 
-      foundGame.connectedUsers = foundGame.connectedUsers - 1;
-      console.log(foundGame);
-      // await foundGame.save();
-
       console.log("Found user:", foundUser.name);
-      console.log("Found game:", foundGame.name);
+      console.log("Found game:", foundGame.title);
 
-      // Calculate duration played (you might want to get this from the game duration)
-      // For now, I'll assume you want to use the game duration or a calculated value
+      // Calculate duration played
       let durationPlayed = 0;
 
-      if (game?.duration) {
-        // If game duration is in minutes, convert to seconds
-        durationPlayed = game.duration * 60;
-      } else if (game?.durationInMinutes) {
-        // If duration is in minutes, convert to seconds
-        durationPlayed = game.durationInMinutes * 60;
+      if (foundGame?.durationInMinutes) {
+        durationPlayed = foundGame.durationInMinutes * 60;
       } else {
-        // Fallback: calculate based on initial time minus remaining time
-        // You might need to send the time played from frontend
         durationPlayed = 39; // Default initial time in seconds
       }
 
@@ -180,7 +156,7 @@ export class GameController {
         (foundUser.yearlyDurationPlayed || 0) + durationPlayed;
 
       // Update user's score/eyes if needed
-      foundUser.eyes -= 20 - score; // Uncomment if you want to store the score
+      foundUser.eyes -= 20 - score;
 
       await foundUser.save();
 
@@ -208,10 +184,9 @@ export class GameController {
     }
   }
 
-  // Optional: Add a dedicated method to get only the closest game
   async getClosestGame(req: any, res: any) {
     try {
-      const todayString = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+      const todayString = new Date().toISOString().split("T")[0];
 
       const closestGame = await Game.findOne({
         startDate: { $gte: todayString },
