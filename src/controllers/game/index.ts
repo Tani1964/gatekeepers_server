@@ -156,7 +156,7 @@ export class GameController {
         (foundUser.yearlyDurationPlayed || 0) + durationPlayed;
 
       // Update user's score/eyes if needed
-      foundUser.eyes -= 20 - score;
+      foundUser.eyes -= (20 - score);
 
       await foundUser.save();
 
@@ -168,6 +168,7 @@ export class GameController {
         success: true,
         message: "Score submitted successfully",
         data: {
+          eyesLeft: foundUser.eyes,
           score: score,
           durationPlayed: durationPlayed,
           monthlyDurationPlayed: foundUser.monthlyDurationPlayed,
