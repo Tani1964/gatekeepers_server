@@ -3,18 +3,12 @@ import { Router } from "express";
 import { createWallet, getTransactions, getWallet } from "../controllers/wallet/index";
 import { checkTransferStatus, creditWallet, debitWallet, getSupportedBanks, verifyAccount } from "../controllers/wallet/payout";
 import { handleWalletWebhook } from "../controllers/wallet/webhook";
-// import { authMiddleware } from "../middleware/auth"; // if you want protection
 
 const router = Router();
 
-// router.use(authMiddleware);
-
-// Wallet operations
-// router.post("/create", createWallet);
 
 // Transactions
 router.get("/transactions", getTransactions);
-// router.get("/transaction", ()=>console.log("Get transaction")); // temporary fix for error
 router.get("/:userId", getWallet);
 
 // Payouts

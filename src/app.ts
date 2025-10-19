@@ -29,6 +29,7 @@ app.get('/api/status', (req, res) => {
 const server = http.createServer(app);
 
 initializeWs(server); 
+app.use('/upload', imageRoutes);
 app.use('/health', healthRoute);
 app.use('/auth', authRoute);
 app.use('/games', gameRouter);
@@ -36,7 +37,6 @@ app.use('/admin', gameAdminRouter);
 app.use('/wallet', walletRouter);
 app.use('/users', userRouter);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/images', imageRoutes);
 
 
 export { app, server };

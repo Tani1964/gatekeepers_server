@@ -1,3 +1,7 @@
+// ========================================
+// UPDATED CloudinaryService
+// ========================================
+
 import { v2 as cloudinary } from 'cloudinary';
 import { Readable } from 'stream';
 
@@ -10,17 +14,23 @@ export class CloudinaryService {
     });
   }
 
+  // ✅ UPDATED: Made userId optional for game images
   async uploadImage(
     fileBuffer: Buffer,
-    userId: string,
+    userId?: string,  // Now optional
     folder: string = 'user_profiles'
   ): Promise<{ url: string; publicId: string }> {
     try {
+      // Generate public_id based on whether userId exists
+      const publicId = userId 
+        ? `user_${userId}_${Date.now()}`
+        : `image_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
       const result = await new Promise<any>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder: folder,
-            public_id: `user_${userId}_${Date.now()}`,
+            public_id: publicId,
             transformation: [
               { width: 500, height: 500, crop: 'limit' },
               { quality: 'auto' },
@@ -59,15 +69,17 @@ export class CloudinaryService {
     }
   }
 
+  // ✅ UPDATED: Made userId optional
   async uploadMultipleImages(
     fileBuffers: Buffer[],
-    userId: string,
+    userId?: string,
     folder: string = 'user_uploads'
   ): Promise<Array<{ url: string; publicId: string }>> {
     try {
-      const uploadPromises = fileBuffers.map((buffer, index) =>
-        this.uploadImage(buffer, `${userId}_${index}`, folder)
-      );
+      const uploadPromises = fileBuffers.map((buffer, index) => {
+        const id = userId ? `${userId}_${index}` : undefined;
+        return this.uploadImage(buffer, id, folder);
+      });
       return await Promise.all(uploadPromises);
     } catch (error) {
       console.error('Multiple upload error:', error);
@@ -95,3 +107,4 @@ export class CloudinaryService {
     }
   }
 }
+

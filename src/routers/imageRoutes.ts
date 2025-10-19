@@ -1,30 +1,31 @@
 import express from 'express';
 import { ImageController, upload } from '../controllers/imageController';
-// import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = express.Router();
 const imageController = new ImageController();
 
-// Upload single profile image
+router.get('', (req, res) => {
+  res.send({ message: "Upload endpoint working" });
+});
+
+// Single image upload - NO AUTH
 router.post(
-  '/upload',
-//   authMiddleware,
+  '',
   upload.single('image'),
   imageController.uploadProfileImage.bind(imageController)
 );
 
-// Delete profile image
+// Delete - REQUIRES AUTH (keep commented if not using)
 router.delete(
-  '/delete',
-//   authMiddleware,
+  'delete',
+  // authMiddleware,  // Keep commented
   imageController.deleteProfileImage.bind(imageController)
 );
 
-// Upload multiple images (gallery)
+// Multiple images - NO AUTH
 router.post(
-  '/upload-multiple',
-//   authMiddleware,
-  upload.array('images', 10), // Max 10 images
+  'upload-multiple',
+  upload.array('images', 10),
   imageController.uploadMultiple.bind(imageController)
 );
 
