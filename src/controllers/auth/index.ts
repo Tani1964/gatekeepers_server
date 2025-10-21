@@ -11,40 +11,80 @@ const otpService = new OTPService();
 
 export class AuthController {
 
-  async register(req: any, res: any) {
-    try {
-      const { email, name, age, password, phoneNumber } = req.body;
-  
-    
-      // Log incoming data
-      
-      const existingUser = await User.findByEmail(email);
-      console.log('Registration attempt:', { email, name, age, phoneNumber });
-      if (existingUser) {
-        return res.status(400).json({ error: 'User already exists' });
-      }
+ async register(req: any, res: any) {
+  try {
+    const { email, name, age, password, phoneNumber, referral } = req.body;
 
-      const newUser = new User({
-        email,
-        name,
-        age,
-        phoneNumber,
-        profileImage: 'null', // Default empty string
-        passwordHash: await bcrypt.hash(password, 10),
-      });
-      console.log('User object created:k', newUser);
-      
-      // User.create(newUser);
-      await newUser.save();
-      await createWallet(newUser, "");
-      console.log('User saved successfully:', newUser);
+    // Log incoming data
+    console.log('Registration attempt:', { email, name, age, phoneNumber, referral });
 
-      res.status(201).json({ message: 'User registered successfully' });
-    } catch (error) {
-      console.error('Registration error details:', error);
-      res.status(500).json({ error: 'Registration failed', details: error });
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
     }
+
+    // Handle referral code if provided
+    let referrer = null;
+    if (referral) {
+      referrer = await User.findOne({ referralCode: referral });
+      if (!referrer) {
+        return res.status(400).json({ error: 'Invalid referral code' });
+      }
+    }
+
+    console.log('Referrer found:', referrer ? referrer.email : 'None');
+
+    // Generate unique referral code for new user
+    const generateReferralCode = () => {
+      return `${name.substring(0, 3).toUpperCase()}${Date.now().toString(36)}`.substring(0, 10);
+    };
+
+    const newUser = new User({
+      email,
+      name,
+      age,
+      phoneNumber,
+      profileImage: 'null',
+      passwordHash: await bcrypt.hash(password, 10),
+      referralCode: generateReferralCode(),
+    });
+
+    console.log('User object created:', newUser);
+
+    // Save the new user first
+    await newUser.save();
+
+    // If there's a referrer, add the new user to their referrals
+    if (referrer) {
+      if (!referrer.referrals) {
+        referrer.referrals = [];
+      }
+      if (newUser._id) {
+        referrer.referrals.push(newUser._id.toString());
+      }
+      await referrer.save();
+
+      // Optional: Award bonus eyes to referrer
+      referrer.eyes += 10; // Example: 10 eyes bonus per referral
+      await referrer.save();
+
+      console.log(`User ${newUser.email} registered with referral code from ${referrer.email}`);
+    }
+
+    // Create wallet for new user
+    await createWallet(newUser, "");
+
+    console.log('User saved successfully:', newUser);
+
+    res.status(201).json({ 
+      message: 'User registered successfully',
+      referralCode: newUser.referralCode,
+    });
+  } catch (error) {
+    console.error('Registration error details:', error);
+    res.status(500).json({ error: 'Registration failed', details: error });
   }
+}
 
   async initiateLogin(req: any, res: any) {
     try {

@@ -16,6 +16,7 @@ export interface IUser extends Document {
   notifications:any;
   referralCode?: string;
   referrals?: string[];
+  referralChallenges?: number;
   pendingReferrals?: number;
   referralEyes?: number;
   monthlyDurationPlayed?: number; // in minutes
