@@ -61,6 +61,7 @@ export class AuthController {
       }
       if (newUser._id) {
         referrer.referrals.push(newUser._id.toString());
+        referrer.eyes += 3
       }
       await referrer.save();
 
