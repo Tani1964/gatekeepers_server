@@ -66,8 +66,8 @@ export class AuthController {
       await referrer.save();
 
       // Optional: Award bonus eyes to referrer
-      referrer.eyes += 10; // Example: 10 eyes bonus per referral
-      await referrer.save();
+      // referrer.eyes += 10; // Example: 10 eyes bonus per referral
+      // await referrer.save();
 
       console.log(`User ${newUser.email} registered with referral code from ${referrer.email}`);
     }
