@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Wallet } from "../../models/Wallet";
 import { PaystackWalletService } from "../../services/paystackWalletService";
+import { User } from './../../models/User';
 
 // Updated debit wallet function
 export const debitWallet = async (req: Request, res: Response) => {
@@ -148,12 +149,21 @@ export const getSupportedBanks = async (req: Request, res: Response) => {
 // Credit wallet function (unchanged)
 export const creditWallet = async (req: Request, res: Response) => {
   try {
-    const { userId, amount } = req.body;
+    const { userId, amount, numberOfEyes } = req.body;
 
     const wallet = await Wallet.findOne({ userId });
     if (!wallet) {
       return res.status(404).json({ message: "Wallet not found" });
     }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.eyes += numberOfEyes;
+    await user.save();
+
 
     wallet.balance += amount;
     wallet.transactions.push({ amount, type: "credit", date: new Date() });
