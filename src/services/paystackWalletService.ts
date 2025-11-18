@@ -4,7 +4,7 @@ export class PaystackWalletService {
   private static readonly BASE_URL = "https://api.paystack.co";
   private static readonly SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 
-  // Step 1: Create transfer recipient
+  // Create transfer recipient
   static async createTransferRecipient(
     name: string, 
     accountNumber: string, 
@@ -38,7 +38,7 @@ export class PaystackWalletService {
     }
   }
 
-  // Step 2: Initiate transfer to user
+  // Initiate transfer
   static async initializeTransaction(
     amount: number,
     recipientCode: string,
@@ -51,7 +51,7 @@ export class PaystackWalletService {
       const response = await axios.post(
         url,
         {
-          source: "balance", // Transfer from your Paystack balance
+          source: "balance",
           amount: amount * 100, // Convert to kobo
           recipient: recipientCode,
           reason,
@@ -72,9 +72,35 @@ export class PaystackWalletService {
     }
   }
 
-  // Step 3: Verify transfer status
-  static async verifyTransaction(transferCode: string) {
-    const url = `${this.BASE_URL}/transfer/verify/${transferCode}`;
+  // NEW: Finalize transfer with OTP
+  static async finalizeTransfer(transferCode: string, otp: string) {
+    const url = `${this.BASE_URL}/transfer/finalize_transfer`;
+
+    try {
+      const response = await axios.post(
+        url,
+        {
+          transfer_code: transferCode,
+          otp: otp,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Finalize transfer error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  // Verify transfer status
+  static async verifyTransaction(reference: string) {
+    const url = `${this.BASE_URL}/transfer/verify/${reference}`;
 
     try {
       const response = await axios.get(url, {
@@ -90,7 +116,7 @@ export class PaystackWalletService {
     }
   }
 
-  // Helper: Get list of supported banks
+  // Get list of supported banks
   static async getBanks() {
     const url = `${this.BASE_URL}/bank`;
 
@@ -108,7 +134,7 @@ export class PaystackWalletService {
     }
   }
 
-  // Helper: Verify account number
+  // Verify account number
   static async verifyAccount(accountNumber: string, bankCode: string) {
     const url = `${this.BASE_URL}/bank/resolve`;
 
@@ -126,6 +152,32 @@ export class PaystackWalletService {
       return response.data;
     } catch (error: any) {
       console.error('Account verification error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  // NEW: Resend OTP
+  static async resendOtp(transferCode: string, reason: string = "resend_otp") {
+    const url = `${this.BASE_URL}/transfer/resend_otp`;
+
+    try {
+      const response = await axios.post(
+        url,
+        {
+          transfer_code: transferCode,
+          reason: reason,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Resend OTP error:', error.response?.data || error.message);
       throw error;
     }
   }

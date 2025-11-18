@@ -3,8 +3,8 @@ import { Wallet } from "../../models/Wallet";
 import { PaystackWalletService } from "../../services/paystackWalletService";
 import { User } from './../../models/User';
 
-// Updated debit wallet function
-export const debitWallet = async (req: Request, res: Response) => {
+// Step 1: Initiate withdrawal (don't debit wallet yet)
+export const initiateWithdrawal = async (req: Request, res: Response) => {
   try {
     const { 
       user, 
@@ -18,7 +18,7 @@ export const debitWallet = async (req: Request, res: Response) => {
     // Validate required fields
     if (!user?.id || !amount || !account_number || !bank_code || !account_name) {
       return res.status(400).json({ 
-        message: "Missing required fields: user, amount, account_number, bank_code, account_name" 
+        message: "Missing required fields" 
       });
     }
 
@@ -34,7 +34,7 @@ export const debitWallet = async (req: Request, res: Response) => {
     }
 
     try {
-      // Step 1: Verify the account number first
+      // Verify account
       const accountVerification = await PaystackWalletService.verifyAccount(
         account_number, 
         bank_code
@@ -47,9 +47,7 @@ export const debitWallet = async (req: Request, res: Response) => {
         });
       }
 
-      console.log('Account verified:', accountVerification.data);
-
-      // Step 2: Create transfer recipient
+      // Create recipient
       const recipient = await PaystackWalletService.createTransferRecipient(
         account_name,
         account_number,
@@ -63,9 +61,7 @@ export const debitWallet = async (req: Request, res: Response) => {
         });
       }
 
-      console.log('Recipient created:', recipient.data);
-
-      // Step 3: Initiate the transfer
+      // Initiate transfer
       const transfer = await PaystackWalletService.initializeTransaction(
         amount,
         recipient.data.recipient_code,
@@ -82,28 +78,31 @@ export const debitWallet = async (req: Request, res: Response) => {
 
       console.log('Transfer initiated:', transfer.data);
 
-      // Step 4: Update wallet (only after successful transfer initiation)
-      wallet.balance -= amount;
+      // Check if OTP is required
+      const requiresOtp = transfer.data.status === "otp";
+
+      // Store pending transaction (don't debit yet)
       wallet.transactions.push({ 
         amount, 
         type: "debit", 
         date: new Date(),
         reference: transfer.data.reference,
-        status: transfer.data.status,
+        status: "pending", // Mark as pending
         transferCode: transfer.data.transfer_code
       });
 
       await wallet.save();
 
+      // Return response with OTP requirement
       res.json({
-        message: "Withdrawal initiated successfully",
-        wallet: {
-          balance: wallet.balance,
-          userId: wallet.userId
-        },
+        message: requiresOtp 
+          ? "OTP required to complete withdrawal" 
+          : "Withdrawal initiated successfully",
+        requiresOtp,
+        transferCode: transfer.data.transfer_code,
+        reference: transfer.data.reference,
+        status: transfer.data.status,
         transfer: {
-          reference: transfer.data.reference,
-          status: transfer.data.status,
           amount: amount,
           recipient: accountVerification.data.account_name
         }
@@ -118,9 +117,103 @@ export const debitWallet = async (req: Request, res: Response) => {
     }
 
   } catch (error: any) {
-    console.error("Wallet debit error:", error);
+    console.error("Wallet withdrawal error:", error);
     res.status(500).json({ message: error.message });
   }
+};
+
+// Step 2: Finalize withdrawal with OTP
+export const finalizeWithdrawal = async (req: Request, res: Response) => {
+  try {
+    const { userId, transferCode, otp } = req.body;
+
+    if (!userId || !transferCode || !otp) {
+      return res.status(400).json({ 
+        message: "Missing required fields: userId, transferCode, otp" 
+      });
+    }
+
+    // Find user's wallet
+    const wallet = await Wallet.findOne({ userId });
+    if (!wallet) {
+      return res.status(404).json({ message: "Wallet not found" });
+    }
+
+    try {
+      // Finalize transfer with OTP
+      const finalizeResult = await PaystackWalletService.finalizeTransfer(
+        transferCode,
+        otp
+      );
+
+      if (!finalizeResult.status) {
+        return res.status(400).json({ 
+          message: "Failed to finalize transfer", 
+          details: finalizeResult 
+        });
+      }
+
+      // Verify the transfer was successful
+      const verification = await PaystackWalletService.verifyTransaction(
+        finalizeResult.data.reference
+      );
+
+      if (verification.data.status !== "success") {
+        return res.status(400).json({ 
+          message: "Transfer verification failed", 
+          status: verification.data.status 
+        });
+      }
+
+      // Find the pending transaction
+      const transaction = wallet.transactions.find(
+        t => t.transferCode === transferCode && t.status === "pending"
+      );
+
+      if (!transaction) {
+        return res.status(404).json({ 
+          message: "Pending transaction not found" 
+        });
+      }
+
+      // NOW debit the wallet
+      wallet.balance -= transaction.amount;
+      transaction.status = "success";
+      transaction.date = new Date();
+
+      await wallet.save();
+
+      res.json({
+        message: "Withdrawal completed successfully",
+        wallet: {
+          balance: wallet.balance,
+          userId: wallet.userId
+        },
+        transfer: {
+          reference: verification.data.reference,
+          status: verification.data.status,
+          amount: transaction.amount
+        }
+      });
+
+    } catch (finalizeError: any) {
+      console.error("Finalize transfer error:", finalizeError);
+      return res.status(500).json({ 
+        message: "Failed to finalize transfer", 
+        error: finalizeError.response?.data || finalizeError.message 
+      });
+    }
+
+  } catch (error: any) {
+    console.error("Finalize withdrawal error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Legacy function - keeping for backward compatibility
+export const debitWallet = async (req: Request, res: Response) => {
+  // Redirect to new initiate endpoint
+  return initiateWithdrawal(req, res);
 };
 
 // Function to check transfer status
@@ -164,7 +257,6 @@ export const creditWallet = async (req: Request, res: Response) => {
     user.eyes += numberOfEyes;
     await user.save();
 
-
     wallet.balance += amount;
     wallet.transactions.push({ amount, type: "credit", date: new Date() });
 
@@ -186,4 +278,4 @@ export const verifyAccount = async (req: Request, res: Response) => {
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
-}
+};
