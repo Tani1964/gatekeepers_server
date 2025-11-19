@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { Wallet } from "../../models/Wallet";
 import { PaystackWalletService } from "../../services/paystackWalletService";
-import { User } from './../../models/User';
+import { User } from "./../../models/User";
 
-// Step 1: Initiate withdrawal (don't debit wallet yet)
+// Step 1: Initiate withdrawal
 export const initiateWithdrawal = async (req: Request, res: Response) => {
   try {
     const { 
@@ -81,32 +81,64 @@ export const initiateWithdrawal = async (req: Request, res: Response) => {
       // Check if OTP is required
       const requiresOtp = transfer.data.status === "otp";
 
-      // Store pending transaction (don't debit yet)
-      wallet.transactions.push({ 
-        amount, 
-        type: "debit", 
-        date: new Date(),
-        reference: transfer.data.reference,
-        status: "pending", // Mark as pending
-        transferCode: transfer.data.transfer_code
-      });
+      if (requiresOtp) {
+        // Store pending transaction (don't debit yet)
+        wallet.transactions.push({ 
+          amount, 
+          type: "debit", 
+          date: new Date(),
+          reference: transfer.data.reference,
+          status: "pending",
+          transferCode: transfer.data.transfer_code
+        });
 
-      await wallet.save();
+        await wallet.save();
 
-      // Return response with OTP requirement
-      res.json({
-        message: requiresOtp 
-          ? "OTP required to complete withdrawal" 
-          : "Withdrawal initiated successfully",
-        requiresOtp,
-        transferCode: transfer.data.transfer_code,
-        reference: transfer.data.reference,
-        status: transfer.data.status,
-        transfer: {
-          amount: amount,
-          recipient: accountVerification.data.account_name
-        }
-      });
+        // Return response with OTP requirement
+        return res.json({
+          message: "OTP required to complete withdrawal",
+          requiresOtp: true,
+          transferCode: transfer.data.transfer_code,
+          reference: transfer.data.reference,
+          status: transfer.data.status,
+          transfer: {
+            amount: amount,
+            recipient: accountVerification.data.account_name
+          }
+        });
+      } else {
+        // No OTP required - complete withdrawal immediately
+        
+        // Debit the wallet
+        wallet.balance -= amount;
+        
+        // Add transaction record
+        wallet.transactions.push({ 
+          amount, 
+          type: "debit", 
+          date: new Date(),
+          reference: transfer.data.reference,
+          status: "success",
+          transferCode: transfer.data.transfer_code
+        });
+
+        await wallet.save();
+
+        return res.json({
+          message: "Withdrawal completed successfully",
+          requiresOtp: false,
+          reference: transfer.data.reference,
+          status: transfer.data.status,
+          wallet: {
+            balance: wallet.balance,
+            userId: wallet.userId
+          },
+          transfer: {
+            amount: amount,
+            recipient: accountVerification.data.account_name
+          }
+        });
+      }
 
     } catch (transferError: any) {
       console.error("Transfer error:", transferError);
@@ -141,13 +173,12 @@ export const finalizeWithdrawal = async (req: Request, res: Response) => {
 
     try {
       // Finalize transfer with OTP
-
       const finalizeResult = await PaystackWalletService.finalizeTransfer(
         transferCode,
         otp
       );
 
-      if (otp && !finalizeResult.status) {
+      if (!finalizeResult.status) {
         return res.status(400).json({ 
           message: "Failed to finalize transfer", 
           details: finalizeResult 
@@ -210,7 +241,6 @@ export const finalizeWithdrawal = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 // Legacy function - keeping for backward compatibility
 export const debitWallet = async (req: Request, res: Response) => {
   // Redirect to new initiate endpoint
@@ -222,7 +252,9 @@ export const checkTransferStatus = async (req: Request, res: Response) => {
   try {
     const { transferCode } = req.params;
 
-    const transferStatus = await PaystackWalletService.verifyTransaction(transferCode);
+    const transferStatus = await PaystackWalletService.verifyTransaction(
+      transferCode
+    );
 
     res.json(transferStatus);
   } catch (error: any) {
@@ -273,8 +305,11 @@ export const verifyAccount = async (req: Request, res: Response) => {
   try {
     const { accountNumber, bankCode } = req.body;
 
-    const verification = await PaystackWalletService.verifyAccount(accountNumber, bankCode);
-    
+    const verification = await PaystackWalletService.verifyAccount(
+      accountNumber,
+      bankCode
+    );
+
     res.json(verification);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
