@@ -141,12 +141,13 @@ export const finalizeWithdrawal = async (req: Request, res: Response) => {
 
     try {
       // Finalize transfer with OTP
+
       const finalizeResult = await PaystackWalletService.finalizeTransfer(
         transferCode,
         otp
       );
 
-      if (!finalizeResult.status) {
+      if (otp && !finalizeResult.status) {
         return res.status(400).json({ 
           message: "Failed to finalize transfer", 
           details: finalizeResult 
