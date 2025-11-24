@@ -197,4 +197,119 @@ export class AuthController {
       res.status(500).json({ error: 'OTP verification failed' });
     }
   }
+  async initiateForgotPassword(req: any, res: any) {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      return res.json({
+        message: 'If an account exists with this email, a password reset OTP has been sent',
+      });
+    }
+
+    // Create OTP for password reset
+    await otpService.createOTP(email, 'password-reset');
+
+    console.log(`Password reset OTP sent to: ${email}`);
+
+    res.json({
+      message: 'Password reset OTP has been sent to your email',
+      nextStep: 'verify-reset-otp',
+      email: email,
+    });
+
+  } catch (error) {
+    console.error('Forgot password initiation error:', error);
+    res.status(500).json({ error: 'Failed to initiate password reset' });
+  }
+}
+
+async verifyResetOTP(req: any, res: any) {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Email and OTP are required' });
+    }
+
+    // Verify the OTP
+    const otpResult = await otpService.verifyOTP(email, otp, 'password-reset');
+
+    if (!otpResult.success) {
+      return res.status(401).json({ error: otpResult.message });
+    }
+
+    // Generate a temporary token for password reset (valid for 15 minutes)
+    const resetToken = jwt.sign(
+      { email, purpose: 'password-reset' },
+      process.env.JWT_SECRET!,
+      { expiresIn: '15m' }
+    );
+
+    res.json({
+      message: 'OTP verified successfully',
+      resetToken,
+      nextStep: 'reset-password',
+    });
+
+  } catch (error) {
+    console.error('Reset OTP verification error:', error);
+    res.status(500).json({ error: 'OTP verification failed' });
+  }
+}
+
+async resetPassword(req: any, res: any) {
+  try {
+    const { resetToken, newPassword } = req.body;
+
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({ error: 'Reset token and new password are required' });
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    // Verify reset token
+    let decoded: any;
+    try {
+      decoded = jwt.verify(resetToken, process.env.JWT_SECRET!);
+    } catch (error) {
+      return res.status(401).json({ error: 'Invalid or expired reset token' });
+    }
+
+    if (decoded.purpose !== 'password-reset') {
+      return res.status(401).json({ error: 'Invalid reset token' });
+    }
+
+    // Find user and update password
+    const user = await User.findOne({ email: decoded.email });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Hash new password and update
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    console.log(`Password reset successful for: ${user.email}`);
+
+    res.json({
+      message: 'Password has been reset successfully',
+      nextStep: 'login',
+    });
+
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+}
 }

@@ -11,5 +11,10 @@ router.post("/verify-otp", (req:any, res:any) =>
 );
 
 router.get("/verify-token", (req:any, res:any) => authController.verifyToken(req, res));
+router.post("/forgot-password", (req: any, res: any) => authController.initiateForgotPassword(req, res));
+router.post("/verify-reset-otp", (req: any, res: any) => authController.verifyResetOTP(req, res));
+router.post("/reset-password", (req: any, res: any) => authController.resetPassword(req, res));
+
+
 
 export default router;
