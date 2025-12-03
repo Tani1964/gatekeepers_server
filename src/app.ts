@@ -18,7 +18,14 @@ const app = express();
 connectDB();
 app.use(
   "/api/payments/webhook",
-  express.raw({ type: "application/json" })
+  express.raw({ type: "application/json" }),
+  (req, res, next) => {
+    // Store raw body for signature verification
+    if (req.body) {
+      (req as any).rawBody = req.body.toString();
+    }
+    next();
+  }
 );
 
 app.use(cors());

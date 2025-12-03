@@ -1,4 +1,5 @@
 // controllers/payments.ts
+import crypto from "crypto";
 import { Request, Response } from "express";
 import { User } from "../../models/User";
 import { Wallet } from "../../models/Wallet";
@@ -210,17 +211,22 @@ export const getPaymentHistory = async (req: Request, res: Response) => {
  */
 export const handlePaymentWebhook = async (req: Request, res: Response) => {
   try {
-    const hash = req.headers["x-paystack-signature"];
+    const hash = req.headers["x-paystack-signature"] as string;
     const secret = process.env.PAYSTACK_SECRET_KEY;
 
+    if (!secret) {
+      console.error("PAYSTACK_SECRET_KEY is not set");
+      return res.status(500).json({ message: "Server configuration error" });
+    }
+
     // Verify webhook signature
-    const crypto = require("crypto");
     const computedHash = crypto
       .createHmac("sha512", secret)
       .update(JSON.stringify(req.body))
       .digest("hex");
 
     if (hash !== computedHash) {
+      console.error("Invalid webhook signature");
       return res.status(401).json({ message: "Invalid signature" });
     }
 
@@ -230,39 +236,62 @@ export const handlePaymentWebhook = async (req: Request, res: Response) => {
     if (event.event === "charge.success") {
       const { reference, metadata, amount, status } = event.data;
 
+      console.log("Processing charge.success event:", {
+        reference,
+        metadata,
+        amount,
+        status
+      });
+
       // Only process if it's an eyes purchase
       if (metadata?.type === "eyes_purchase" && status === "success") {
         const userId = metadata.userId;
-        const eyesToCredit = metadata.eyes;
+        const eyesToCredit = parseInt(metadata.eyes);
+
+        if (!userId || !eyesToCredit) {
+          console.error("Missing userId or eyes in metadata");
+          return res.status(400).json({ message: "Invalid metadata" });
+        }
 
         // Credit user's eyes
         const user = await User.findById(userId);
-        if (user) {
-          user.eyes += eyesToCredit;
-          await user.save();
-
-          // Update wallet
-          const wallet = await Wallet.findOne({ userId });
-          if (wallet) {
-            const transaction = wallet.transactions.find(
-              (t) => t.reference === reference
-            );
-
-            if (transaction) {
-              transaction.status = "success";
-              await wallet.save();
-            }
-          }
-
-          console.log(`Webhook: Credited ${eyesToCredit} eyes to user ${userId}`);
+        if (!user) {
+          console.error(`User not found: ${userId}`);
+          return res.status(404).json({ message: "User not found" });
         }
+
+        // Add eyes to user account
+        user.eyes = (user.eyes || 0) + eyesToCredit;
+        await user.save();
+
+        // Update wallet transaction status
+        const wallet = await Wallet.findOne({ userId });
+        if (wallet) {
+          const transaction = wallet.transactions.find(
+            (t) => t.reference === reference
+          );
+
+          if (transaction) {
+            transaction.status = "success";
+            await wallet.save();
+            console.log(`Updated wallet transaction status for reference: ${reference}`);
+          } else {
+            console.warn(`Transaction not found in wallet for reference: ${reference}`);
+          }
+        } else {
+          console.warn(`Wallet not found for user: ${userId}`);
+        }
+
+        console.log(`✓ Credited ${eyesToCredit} eyes to user ${userId}. New balance: ${user.eyes}`);
       }
     }
 
+    // Always respond with 200 to acknowledge receipt
     res.status(200).json({ message: "Webhook received" });
 
   } catch (error: any) {
     console.error("Webhook error:", error);
-    res.status(500).json({ message: error.message });
+    // Still return 200 to prevent Paystack from retrying
+    res.status(200).json({ message: "Webhook processed with errors" });
   }
 };
