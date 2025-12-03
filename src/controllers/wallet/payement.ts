@@ -28,7 +28,7 @@ export const initializePayment = async (req: Request, res: Response) => {
     // Initialize payment with Paystack
     const paymentData = await PaystackPaymentService.initializePayment({
       email,
-      amount: amount * 100, // Convert to kobo
+      amount: amount, // Convert to kobo
       metadata: {
         ...metadata,
         type: "eyes_purchase",

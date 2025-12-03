@@ -52,7 +52,7 @@ export class PaystackWalletService {
         url,
         {
           source: "balance",
-          amount: amount * 100, // Convert to kobo
+          amount: amount , // Convert to kobo
           recipient: recipientCode,
           reason,
           reference: reference || `transfer_${Date.now()}`,
