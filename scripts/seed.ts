@@ -240,19 +240,7 @@ async function hashPassword(password: string): Promise<string> {
   return await bcrypt.hash(password, saltRounds);
 }
 
-async function clearDatabase(): Promise<void> {
-  try {
-    await User.deleteMany({});
-    await Game.deleteMany({});
-    await UserGameDetails.deleteMany({});
-    await Wallet.deleteMany({});
-    await OTP.deleteMany({});
-    console.log('✅ Cleared existing data');
-  } catch (error) {
-    console.error('❌ Error clearing database:', error);
-    throw error;
-  }
-}
+// REMOVED: clearDatabase function - database will NOT be cleared
 
 async function seedUsers(): Promise<any[]> {
   try {
@@ -264,9 +252,41 @@ async function seedUsers(): Promise<any[]> {
     }
 
     console.log('📝 About to insert users:', sampleUsers.length);
-    const users = await User.insertMany(sampleUsers);
-    console.log(`✅ Successfully inserted ${users.length} users with IDs:`, users.map(u => u._id));
-    return users;
+    
+    const insertedUsers: any[] = [];
+    const existingUsers: any[] = [];
+    
+    // Insert users one by one to handle duplicates gracefully
+    for (const userData of sampleUsers) {
+      try {
+        // Check if user already exists
+        const existingUser = await User.findOne({ email: userData.email });
+        
+        if (existingUser) {
+          console.log(`⚠️  User with email ${userData.email} already exists, skipping...`);
+          existingUsers.push(existingUser);
+        } else {
+          const newUser = await User.create(userData);
+          console.log(`✅ Created new user: ${newUser.name} (${newUser.email})`);
+          insertedUsers.push(newUser);
+        }
+      } catch (error: any) {
+        if (error.code === 11000) {
+          // Duplicate key error - fetch the existing user
+          const existingUser = await User.findOne({ email: userData.email });
+          console.log(`⚠️  Duplicate detected for ${userData.email}, using existing user`);
+          if (existingUser) {
+            existingUsers.push(existingUser);
+          }
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    const allUsers = [...insertedUsers, ...existingUsers];
+    console.log(`✅ Total users ready: ${allUsers.length} (${insertedUsers.length} new, ${existingUsers.length} existing)`);
+    return allUsers;
   } catch (error) {
     console.error('❌ Detailed error seeding users:', error);
     throw error;
@@ -299,9 +319,34 @@ async function seedGames(users: any[]): Promise<any[]> {
     });
 
     console.log('📝 About to insert games:', sampleGames.length);
-    const games = await Game.insertMany(sampleGames);
-    console.log(`✅ Successfully inserted ${games.length} games with IDs:`, games.map(g => g._id));
-    return games;
+    
+    const insertedGames: any[] = [];
+    
+    // Insert games one by one to handle any potential issues
+    for (const gameData of sampleGames) {
+      try {
+        // Check if game with same title and date already exists
+        const existingGame = await Game.findOne({ 
+          title: gameData.title, 
+          startDate: gameData.startDate 
+        });
+        
+        if (existingGame) {
+          console.log(`⚠️  Game "${gameData.title}" on ${gameData.startDate} already exists, skipping...`);
+          insertedGames.push(existingGame);
+        } else {
+          const newGame = await Game.create(gameData);
+          console.log(`✅ Created new game: ${newGame.title}`);
+          insertedGames.push(newGame);
+        }
+      } catch (error: any) {
+        console.error(`❌ Error inserting game "${gameData.title}":`, error.message);
+        // Continue with other games even if one fails
+      }
+    }
+    
+    console.log(`✅ Total games ready: ${insertedGames.length}`);
+    return insertedGames;
   } catch (error) {
     console.error('❌ Detailed error seeding games:', error);
     throw error;
@@ -356,9 +401,30 @@ async function seedUserGameDetails(users: any[], games: any[]): Promise<any[]> {
     ];
 
     console.log('📝 About to insert user game details:', userGameDetailsData.length);
-    const userGameDetails = await UserGameDetails.insertMany(userGameDetailsData);
-    console.log(`✅ Successfully inserted ${userGameDetails.length} user game details with IDs:`, userGameDetails.map(ugd => ugd._id));
-    return userGameDetails;
+    
+    const insertedDetails: any[] = [];
+    
+    // Insert user game details one by one
+    for (const detailsData of userGameDetailsData) {
+      try {
+        // Check if details for this user already exist
+        const existingDetails = await UserGameDetails.findOne({ userId: detailsData.userId });
+        
+        if (existingDetails) {
+          console.log(`⚠️  Game details for user ${detailsData.userId} already exist, skipping...`);
+          insertedDetails.push(existingDetails);
+        } else {
+          const newDetails = await UserGameDetails.create(detailsData);
+          console.log(`✅ Created game details for user ${detailsData.userId}`);
+          insertedDetails.push(newDetails);
+        }
+      } catch (error: any) {
+        console.error(`❌ Error inserting game details for user ${detailsData.userId}:`, error.message);
+      }
+    }
+    
+    console.log(`✅ Total user game details ready: ${insertedDetails.length}`);
+    return insertedDetails;
   } catch (error) {
     console.error('❌ Detailed error seeding user game details:', error);
     throw error;
@@ -406,9 +472,30 @@ async function seedWallets(users: any[]): Promise<any[]> {
     ];
 
     console.log('📝 About to insert wallets:', walletData.length);
-    const wallets = await Wallet.insertMany(walletData);
-    console.log(`✅ Successfully inserted ${wallets.length} wallets with IDs:`, wallets.map(w => w._id));
-    return wallets;
+    
+    const insertedWallets: any[] = [];
+    
+    // Insert wallets one by one
+    for (const wallet of walletData) {
+      try {
+        // Check if wallet for this user already exists
+        const existingWallet = await Wallet.findOne({ userId: wallet.userId });
+        
+        if (existingWallet) {
+          console.log(`⚠️  Wallet for user ${wallet.userId} already exists, skipping...`);
+          insertedWallets.push(existingWallet);
+        } else {
+          const newWallet = await Wallet.create(wallet);
+          console.log(`✅ Created wallet for user ${wallet.userId}`);
+          insertedWallets.push(newWallet);
+        }
+      } catch (error: any) {
+        console.error(`❌ Error inserting wallet for user ${wallet.userId}:`, error.message);
+      }
+    }
+    
+    console.log(`✅ Total wallets ready: ${insertedWallets.length}`);
+    return insertedWallets;
   } catch (error) {
     console.error('❌ Detailed error seeding wallets:', error);
     throw error;
@@ -490,10 +577,6 @@ async function verifySeeding(): Promise<void> {
     console.log(`   Wallets in DB: ${walletCount}`);
     console.log(`   OTPs in DB: ${otpCount}`);
     
-    if (userCount === 0) {
-      throw new Error('⚠️  No users were created in the database!');
-    }
-    
     // Sample a few records to verify they contain expected data
     const sampleUser = await User.findOne({});
     console.log('🧪 Sample user:', { 
@@ -522,8 +605,7 @@ async function seedDatabase(): Promise<void> {
     console.log('🔗 Connected to MongoDB');
     console.log(`🌐 Using database: ${mongoose.connection.name}`);
 
-    // Clear existing data
-    await clearDatabase();
+    console.log('\n⚠️  WARNING: Database will NOT be cleared. New data will be added to existing data.\n');
 
     // Seed data in order (maintaining relationships)
     console.log('\n📦 Starting database seeding...\n');

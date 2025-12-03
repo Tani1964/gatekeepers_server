@@ -136,6 +136,7 @@ export class PaystackWalletService {
 
   // Verify account number
   static async verifyAccount(accountNumber: string, bankCode: string) {
+    console.log('Verifying account number:', accountNumber, 'with bank code:', bankCode);
     const url = `${this.BASE_URL}/bank/resolve`;
 
     try {
@@ -151,6 +152,7 @@ export class PaystackWalletService {
 
       return response.data;
     } catch (error: any) {
+      console.log(error)
       console.error('Account verification error:', error.response?.data || error.message);
       throw error;
     }
