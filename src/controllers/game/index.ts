@@ -97,7 +97,7 @@ export class GameController {
     try {
       console.log("Submit score request body:", req.body);
 
-      const { user, game, gameId, score } = req.body;
+      const { user, game, gameId, score, timePlayed } = req.body;
       const userId = user?.id;
 
       console.log("Submitting score for user:", userId, "Score:", score);
@@ -138,14 +138,16 @@ export class GameController {
       console.log("Found user:", foundUser.name);
       console.log("Found game:", foundGame.title);
 
-      // Calculate duration played
-      let durationPlayed = 0;
+      console.log("Time played", timePlayed)
 
-      if (foundGame?.durationInMinutes) {
-        durationPlayed = foundGame.durationInMinutes * 60;
-      } else {
-        durationPlayed = 39; // Default initial time in seconds
-      }
+      // Calculate duration played
+      let durationPlayed = timePlayed;
+
+      // if (foundGame?.durationInMinutes) {
+      //   durationPlayed = foundGame.durationInMinutes * 60;
+      // } else {
+      //   durationPlayed = 39; // Default initial time in seconds
+      // }
 
       console.log("Duration to add:", durationPlayed, "seconds");
 
