@@ -1,7 +1,111 @@
 import { Game } from "../../models/Game";
 import { User } from "../../models/User";
+import { Wallet } from "../../models/Wallet";
+
+// Helper to mark users who left/lost so they can't rejoin
+const userGameStatus: Record<string, Record<string, 'active' | 'left' | 'lost'>> = {};
 
 export class GameController {
+    // User joins a game
+    async joinGame(req: any, res: any) {
+      try {
+        const userId = req.user.id;
+        const { gameId } = req.body;
+        const game = await Game.findById(gameId);
+        if (!game) return res.status(404).json({ success: false, message: "Game not found" });
+
+        // Prevent rejoin if user left/lost
+        if (userGameStatus[gameId]?.[userId] && userGameStatus[gameId][userId] !== 'active') {
+          return res.status(403).json({ success: false, message: "You cannot rejoin this game." });
+        }
+
+        if (!game.connectedUsersArray?.includes(userId)) {
+          (game.connectedUsersArray ??= []).push(userId);
+          game.connectedUsers += 1;
+          await game.save();
+          if (!userGameStatus[gameId]) userGameStatus[gameId] = {};
+          userGameStatus[gameId][userId] = 'active';
+        }
+        return res.status(200).json({ success: true, message: "Joined game", connectedUsers: game.connectedUsers });
+      } catch (error) {
+        return res.status(500).json({ success: false, message: "Internal server error", error });
+      }
+    }
+
+    // User leaves a game
+    async leaveGame(req: any, res: any) {
+      try {
+        const userId = req.user.id;
+        const { gameId } = req.body;
+        const game = await Game.findById(gameId);
+        if (!game) return res.status(404).json({ success: false, message: "Game not found" });
+
+        const idx = game.connectedUsersArray?.indexOf(userId);
+        if (idx !== undefined && idx !== -1) {
+          game.connectedUsersArray!.splice(idx, 1);
+          game.connectedUsers = Math.max(0, game.connectedUsers - 1);
+          await game.save();
+          if (!userGameStatus[gameId]) userGameStatus[gameId] = {};
+          userGameStatus[gameId][userId] = 'left';
+        }
+        return res.status(200).json({ success: true, message: "Left game", connectedUsers: game.connectedUsers });
+      } catch (error) {
+        return res.status(500).json({ success: false, message: "Internal server error", error });
+      }
+    }
+
+    // User loses a game
+    async loseGame(req: any, res: any) {
+      try {
+        const userId = req.user.id;
+        const { gameId } = req.body;
+        const game = await Game.findById(gameId);
+        if (!game) return res.status(404).json({ success: false, message: "Game not found" });
+
+        const idx = game.connectedUsersArray?.indexOf(userId);
+        if (idx !== undefined && idx !== -1) {
+          game.connectedUsersArray!.splice(idx, 1);
+          game.connectedUsers = Math.max(0, game.connectedUsers - 1);
+          await game.save();
+          if (!userGameStatus[gameId]) userGameStatus[gameId] = {};
+          userGameStatus[gameId][userId] = 'lost';
+        }
+        return res.status(200).json({ success: true, message: "Marked as lost", connectedUsers: game.connectedUsers });
+      } catch (error) {
+        return res.status(500).json({ success: false, message: "Internal server error", error });
+      }
+    }
+
+    // End game and split prize among winners
+    async endGameAndDistributePrize(req: any, res: any) {
+      try {
+        const { gameId } = req.body;
+        const game = await Game.findById(gameId);
+        if (!game) return res.status(404).json({ success: false, message: "Game not found" });
+
+        const winners = game.connectedUsersArray;
+        if (!winners || !winners.length) return res.status(400).json({ success: false, message: "No winners to distribute prize." });
+
+        const prizePerWinner = Math.floor(game.price / winners.length);
+        for (const userId of winners) {
+          const wallet = await Wallet.findOne({ userId });
+          if (wallet) {
+            wallet.balance += prizePerWinner;
+            wallet.transactions.push({
+              amount: prizePerWinner,
+              type: "credit",
+              description: `Prize for game ${game.title}`,
+              status: "completed",
+              date: new Date(),
+            });
+            await wallet.save();
+          }
+        }
+        return res.status(200).json({ success: true, message: `Prize distributed: ${prizePerWinner} to each winner`, winners });
+      } catch (error) {
+        return res.status(500).json({ success: false, message: "Internal server error", error });
+      }
+    }
   async getUpcomingGames(req: any, res: any) {
     try {
       const now = new Date();
