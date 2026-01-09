@@ -58,7 +58,7 @@ export class GameController {
     async loseGame(req: any, res: any) {
       try {
         const userId = req.user.id;
-        const { gameId } = req.body;
+        const { gameId, eyesLost } = req.body;
         const game = await Game.findById(gameId);
         if (!game) return res.status(404).json({ success: false, message: "Game not found" });
 
@@ -70,7 +70,18 @@ export class GameController {
           if (!userGameStatus[gameId]) userGameStatus[gameId] = {};
           userGameStatus[gameId][userId] = 'lost';
         }
-        return res.status(200).json({ success: true, message: "Marked as lost", connectedUsers: game.connectedUsers });
+        
+        // Debit eyes from user's account
+        if (eyesLost && eyesLost > 0) {
+          const user = await User.findById(userId);
+          if (user) {
+            user.eyes = Math.max(0, user.eyes - eyesLost);
+            await user.save();
+            console.log(`Debited ${eyesLost} eyes from user ${userId}. Remaining eyes: ${user.eyes}`);
+          }
+        }
+        
+        return res.status(200).json({ success: true, message: "Marked as lost", connectedUsers: game.connectedUsers, eyesDebited: eyesLost || 0 });
       } catch (error) {
         return res.status(500).json({ success: false, message: "Internal server error", error });
       }
@@ -79,29 +90,45 @@ export class GameController {
     // End game and split prize among winners
     async endGameAndDistributePrize(req: any, res: any) {
       try {
-        const { gameId } = req.body;
+        const userId = req.user.id;
+        const { gameId, finalScore } = req.body;
         const game = await Game.findById(gameId);
         if (!game) return res.status(404).json({ success: false, message: "Game not found" });
 
         const winners = game.connectedUsersArray;
         if (!winners || !winners.length) return res.status(400).json({ success: false, message: "No winners to distribute prize." });
 
+        // Calculate prize per winner based on game price
         const prizePerWinner = Math.floor(game.price / winners.length);
-        for (const userId of winners) {
-          const wallet = await Wallet.findOne({ userId });
-          if (wallet) {
-            wallet.balance += prizePerWinner;
-            wallet.transactions.push({
-              amount: prizePerWinner,
-              type: "credit",
-              description: `Prize for game ${game.title}`,
-              status: "completed",
-              date: new Date(),
-            });
-            await wallet.save();
-          }
+        
+        // Credit the prize to the user's eyes
+        const user = await User.findById(userId);
+        if (user) {
+          user.eyes += prizePerWinner;
+          await user.save();
+          console.log(`Credited ${prizePerWinner} eyes to user ${userId}. Total eyes: ${user.eyes}`);
         }
-        return res.status(200).json({ success: true, message: `Prize distributed: ${prizePerWinner} to each winner`, winners });
+        
+        // Also credit wallet for cash rewards
+        const wallet = await Wallet.findOne({ userId });
+        if (wallet) {
+          wallet.balance += prizePerWinner;
+          wallet.transactions.push({
+            amount: prizePerWinner,
+            type: "credit",
+            description: `Prize for game ${game.title}`,
+            status: "completed",
+            date: new Date(),
+          });
+          await wallet.save();
+        }
+        
+        return res.status(200).json({ 
+          success: true, 
+          message: `Prize distributed: ${prizePerWinner} eyes to winner`, 
+          eyesCredited: prizePerWinner,
+          finalScore: finalScore || 0
+        });
       } catch (error) {
         return res.status(500).json({ success: false, message: "Internal server error", error });
       }
@@ -261,8 +288,8 @@ export class GameController {
       foundUser.yearlyDurationPlayed =
         (foundUser.yearlyDurationPlayed || 0) + durationPlayed;
 
-      // Update user's score/eyes if needed
-      foundUser.eyes -= (20 - score);
+      // Note: Eyes deduction/credit is now handled in loseGame and endGameAndDistributePrize endpoints
+      // We don't modify eyes here to avoid double deduction/credit
 
       await foundUser.save();
 
