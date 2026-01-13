@@ -10,7 +10,46 @@ import { createWallet } from '../wallet/index';
 const otpService = new OTPService();
 
 export class AuthController {
-
+  // Increase eyes for a user
+  async increaseEyes(req: any, res: any) {
+    try {
+      const { userId, amount } = req.body;
+      if (!userId || typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ error: 'userId and positive amount are required' });
+      }
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      user.eyes += amount;
+      await user.save();
+      res.status(200).json({ success: true, message: `Increased eyes by ${amount}`, eyes: user.eyes });
+    } catch (error) {
+      console.error('Increase eyes error:', error);
+      res.status(500).json({ error: 'Failed to increase eyes' });
+    }
+  }
+  
+  // Reduce eyes for a user
+  async reduceEyes(req: any, res: any) {
+    try {
+      const { userId, amount } = req.body;
+      if (!userId || typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ error: 'userId and positive amount are required' });
+      }
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      user.eyes = Math.max(0, user.eyes - amount);
+      await user.save();
+      res.status(200).json({ success: true, message: `Reduced eyes by ${amount}`, eyes: user.eyes });
+    } catch (error) {
+      console.error('Reduce eyes error:', error);
+      res.status(500).json({ error: 'Failed to reduce eyes' });
+    }
+  }
+  
  async register(req: any, res: any) {
   try {
     const { email, name, age, password, phoneNumber, referral } = req.body;

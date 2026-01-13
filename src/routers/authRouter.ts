@@ -1,9 +1,13 @@
+
 import express from "express";
 import { AuthController } from "../controllers/auth";
 
 const router = express.Router();
 const authController = new AuthController();
 
+// Eyes management endpoints
+router.post("/increase-eyes", (req: any, res: any) => authController.increaseEyes(req, res));
+router.post("/reduce-eyes", (req: any, res: any) => authController.reduceEyes(req, res));
 router.post("/register", (req:any, res:any) => authController.register(req, res));
 router.post("/login", (req:any, res:any) => authController.initiateLogin(req, res));
 router.post("/verify-otp", (req:any, res:any) =>
