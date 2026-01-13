@@ -23,6 +23,7 @@ export class AuthController {
       }
       user.eyes += amount;
       await user.save();
+      console.log(`Increased eyes for user ${userId} by ${amount}`);
       res.status(200).json({ success: true, message: `Increased eyes by ${amount}`, eyes: user.eyes });
     } catch (error) {
       console.error('Increase eyes error:', error);
@@ -43,6 +44,7 @@ export class AuthController {
       }
       user.eyes = Math.max(0, user.eyes - amount);
       await user.save();
+      console.log(`Reduced eyes for user ${userId} by ${amount}`);
       res.status(200).json({ success: true, message: `Reduced eyes by ${amount}`, eyes: user.eyes });
     } catch (error) {
       console.error('Reduce eyes error:', error);
