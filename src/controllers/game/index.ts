@@ -95,18 +95,47 @@ export class GameController {
         const game = await Game.findById(gameId);
         if (!game) return res.status(404).json({ success: false, message: "Game not found" });
 
-        const winners = game.connectedUsersArray;
-        if (!winners || !winners.length) return res.status(400).json({ success: false, message: "No winners to distribute prize." });
+        // Winners are those still in connectedUsersArray (survivors)
+        const winners = game.connectedUsersArray || [];
+        
+        console.log(`[Prize Distribution] Game: ${game.title}, Total Prize: ${game.price}, Winners: ${winners.length}, Winners IDs: ${winners.join(', ')}`);
+        
+        if (winners.length === 0) {
+          console.log(`[Prize Distribution] No winners - prize pool of ${game.price} remains unclaimed`);
+          return res.status(200).json({ 
+            success: true, 
+            message: "Game ended but no winners to distribute prize",
+            eyesCredited: 0,
+            finalScore: finalScore || 0,
+            totalPrize: game.price,
+            survivors: 0
+          });
+        }
+        
+        // Check if current user is actually a winner
+        if (!winners.includes(userId)) {
+          console.log(`[Prize Distribution] User ${userId} is not in winners list - no prize awarded`);
+          return res.status(200).json({ 
+            success: true, 
+            message: "You did not survive to claim the prize",
+            eyesCredited: 0,
+            finalScore: finalScore || 0,
+            totalPrize: game.price,
+            survivors: winners.length
+          });
+        }
 
-        // Calculate prize per winner based on game price
+        // Calculate prize per winner based on game price and number of survivors
         const prizePerWinner = Math.floor(game.price / winners.length);
+        
+        console.log(`[Prize Distribution] Prize per winner: ${prizePerWinner} (${game.price} / ${winners.length} survivors)`);
         
         // Credit the prize to the user's eyes
         const user = await User.findById(userId);
         if (user) {
           user.eyes += prizePerWinner;
           await user.save();
-          console.log(`Credited ${prizePerWinner} eyes to user ${userId}. Total eyes: ${user.eyes}`);
+          console.log(`[Prize Distribution] Credited ${prizePerWinner} eyes to user ${userId}. Total eyes: ${user.eyes}`);
         }
         
         // Also credit wallet for cash rewards
@@ -116,20 +145,25 @@ export class GameController {
           wallet.transactions.push({
             amount: prizePerWinner,
             type: "credit",
-            description: `Prize for game ${game.title}`,
+            description: `Prize for game ${game.title} (${winners.length} survivor${winners.length > 1 ? 's' : ''})`,
             status: "completed",
             date: new Date(),
           });
           await wallet.save();
+          console.log(`[Prize Distribution] Credited ${prizePerWinner} to wallet for user ${userId}. New balance: ${wallet.balance}`);
         }
         
         return res.status(200).json({ 
           success: true, 
-          message: `Prize distributed: ${prizePerWinner} eyes to winner`, 
+          message: `Prize distributed: ${prizePerWinner} eyes to each of ${winners.length} winner${winners.length > 1 ? 's' : ''}`, 
           eyesCredited: prizePerWinner,
-          finalScore: finalScore || 0
+          finalScore: finalScore || 0,
+          totalPrize: game.price,
+          survivors: winners.length,
+          prizePerWinner
         });
       } catch (error) {
+        console.error('[Prize Distribution] Error:', error);
         return res.status(500).json({ success: false, message: "Internal server error", error });
       }
     }

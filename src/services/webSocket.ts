@@ -305,11 +305,20 @@ async function handleEndGame(ws: any, data: any, broadcastToGame: Function) {
             return;
         }
 
-        // Decrement connected users
+        // Remove user from connectedUsersArray if they lost or disconnected
+        if (userId && game.connectedUsersArray) {
+            const idx = game.connectedUsersArray.indexOf(userId);
+            if (idx !== -1) {
+                game.connectedUsersArray.splice(idx, 1);
+                console.log(`Removed user ${userId} from connectedUsersArray`);
+            }
+        }
+
+        // Decrement connected users count
         game.connectedUsers = Math.max((game.connectedUsers || 1) - 1, 0);
         await game.save();
 
-        console.log(`User ${userId} ended game ${gameId}. Reason: ${reason}. Connected users: ${game.connectedUsers}`);
+        console.log(`User ${userId} ended game ${gameId}. Reason: ${reason}. Connected users: ${game.connectedUsers}. Survivors: ${game.connectedUsersArray?.length || 0}`);
 
         // Notify the user
         ws.send(JSON.stringify({
@@ -317,6 +326,7 @@ async function handleEndGame(ws: any, data: any, broadcastToGame: Function) {
             payload: {
                 gameId,
                 connectedUsers: game.connectedUsers,
+                survivors: game.connectedUsersArray?.length || 0,
                 message: 'Game ended successfully'
             }
         }));
@@ -328,7 +338,8 @@ async function handleEndGame(ws: any, data: any, broadcastToGame: Function) {
                 gameId,
                 userId,
                 reason: reason || 'unknown',
-                connectedUsers: game.connectedUsers
+                connectedUsers: game.connectedUsers,
+                survivors: game.connectedUsersArray?.length || 0
             }
         });
 
@@ -357,11 +368,30 @@ async function handleDisconnect(ws: any, broadcastToGame: Function) {
         
         if (!game) return;
 
-        // Decrement connected users
+        // Remove user from connectedUsersArray
+        if (userId && game.connectedUsersArray) {
+            const idx = game.connectedUsersArray.indexOf(userId);
+            if (idx !== -1) {
+                game.connectedUsersArray.splice(idx, 1);
+                console.log(`Removed disconnected user ${userId} from connectedUsersArray`);
+            }
+        }
+
+        // Also remove from readyUsersArray if present
+        if (userId && game.readyUsersArray) {
+            const readyIdx = game.readyUsersArray.indexOf(userId);
+            if (readyIdx !== -1) {
+                game.readyUsersArray.splice(readyIdx, 1);
+                game.readyUsers = Math.max((game.readyUsers || 1) - 1, 0);
+                console.log(`Removed disconnected user ${userId} from readyUsersArray`);
+            }
+        }
+
+        // Decrement connected users count
         game.connectedUsers = Math.max((game.connectedUsers || 1) - 1, 0);
         await game.save();
 
-        console.log(`User ${userId} disconnected from game ${gameId}. Connected users: ${game.connectedUsers}`);
+        console.log(`User ${userId} disconnected from game ${gameId}. Connected users: ${game.connectedUsers}. Survivors: ${game.connectedUsersArray?.length || 0}`);
 
         // Broadcast to all players in this game
         broadcastToGame(gameId, {
@@ -369,7 +399,8 @@ async function handleDisconnect(ws: any, broadcastToGame: Function) {
             payload: {
                 gameId,
                 userId,
-                connectedUsers: game.connectedUsers
+                connectedUsers: game.connectedUsers,
+                survivors: game.connectedUsersArray?.length || 0
             }
         });
 
