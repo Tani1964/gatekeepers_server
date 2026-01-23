@@ -130,28 +130,46 @@ export class GameController {
         
         console.log(`[Prize Distribution] Prize per winner: ${prizePerWinner} (${game.price} / ${winners.length} survivors)`);
         
-        // Credit the prize to the user's eyes
-        const user = await User.findById(userId);
-        if (user) {
-          user.eyes += prizePerWinner;
-          await user.save();
-          console.log(`[Prize Distribution] Credited ${prizePerWinner} eyes to user ${userId}. Total eyes: ${user.eyes}`);
+        // Distribute prize to ALL survivors (not just the requester)
+        let distributionCount = 0;
+        const distributionResults = [];
+        
+        for (const winnerId of winners) {
+          try {
+            // Credit the prize to user's eyes
+            const user = await User.findById(winnerId);
+            if (user) {
+              user.eyes += prizePerWinner;
+              await user.save();
+              console.log(`[Prize Distribution] Credited ${prizePerWinner} eyes to user ${winnerId}. Total eyes: ${user.eyes}`);
+            }
+            
+            // Also credit wallet for cash rewards
+            const wallet = await Wallet.findOne({ userId: winnerId });
+            if (wallet) {
+              wallet.balance += prizePerWinner;
+              wallet.transactions.push({
+                amount: prizePerWinner,
+                type: "credit",
+                description: `Prize for game ${game.title} (${winners.length} survivor${winners.length > 1 ? 's' : ''})`,
+                status: "completed",
+                date: new Date(),
+              });
+              await wallet.save();
+              console.log(`[Prize Distribution] Credited ${prizePerWinner} to wallet for user ${winnerId}. New balance: ${wallet.balance}`);
+              distributionCount++;
+              distributionResults.push({ userId: winnerId, amount: prizePerWinner, success: true });
+            } else {
+              console.warn(`[Prize Distribution] Wallet not found for user ${winnerId}`);
+              distributionResults.push({ userId: winnerId, amount: 0, success: false, reason: 'wallet_not_found' });
+            }
+          } catch (err) {
+            console.error(`[Prize Distribution] Error distributing to user ${winnerId}:`, err);
+            distributionResults.push({ userId: winnerId, amount: 0, success: false, reason: 'distribution_error' });
+          }
         }
         
-        // Also credit wallet for cash rewards
-        const wallet = await Wallet.findOne({ userId });
-        if (wallet) {
-          wallet.balance += prizePerWinner;
-          wallet.transactions.push({
-            amount: prizePerWinner,
-            type: "credit",
-            description: `Prize for game ${game.title} (${winners.length} survivor${winners.length > 1 ? 's' : ''})`,
-            status: "completed",
-            date: new Date(),
-          });
-          await wallet.save();
-          console.log(`[Prize Distribution] Credited ${prizePerWinner} to wallet for user ${userId}. New balance: ${wallet.balance}`);
-        }
+        console.log(`[Prize Distribution] Successfully distributed prize to ${distributionCount}/${winners.length} survivors`);
         
         return res.status(200).json({ 
           success: true, 
@@ -160,7 +178,9 @@ export class GameController {
           finalScore: finalScore || 0,
           totalPrize: game.price,
           survivors: winners.length,
-          prizePerWinner
+          prizePerWinner,
+          distributionCount,
+          distributionResults
         });
       } catch (error) {
         console.error('[Prize Distribution] Error:', error);
