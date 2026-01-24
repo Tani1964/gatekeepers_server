@@ -52,7 +52,7 @@ const GameSchema = new Schema<IGame>(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-      }
+      },
     ],
     connectedUsers: {
       type: Number,
@@ -74,6 +74,10 @@ const GameSchema = new Schema<IGame>(
       type: Number,
       required: true,
     },
+    prizeDistributed: {
+      type: Boolean,
+      default: false,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -82,7 +86,7 @@ const GameSchema = new Schema<IGame>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export const Game = mongoose.model<IGame>("Game", GameSchema);

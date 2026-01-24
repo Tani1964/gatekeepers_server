@@ -152,17 +152,19 @@ export class GameController {
             survivors: 0
           });
         }
-        
-        // Check if current user is actually a winner
-        if (!winners.includes(userId)) {
-          console.log(`[Prize Distribution] User ${userId} is not in winners list - no prize awarded`);
+
+        // Check if prize has already been distributed
+        if (game.prizeDistributed) {
+          console.log(`[Prize Distribution] Prize already distributed for game ${gameId}`);
+          const prizePerWinner = Math.floor(game.price / winners.length);
           return res.status(200).json({ 
             success: true, 
-            message: "You did not survive to claim the prize",
-            eyesCredited: 0,
+            message: "Prize already distributed to all winners",
+            eyesCredited: prizePerWinner,
             finalScore: finalScore || 0,
             totalPrize: game.price,
-            survivors: winners.length
+            survivors: winners.length,
+            alreadyDistributed: true
           });
         }
 
@@ -171,21 +173,12 @@ export class GameController {
         
         console.log(`[Prize Distribution] Prize per winner: ${prizePerWinner} (${game.price} / ${winners.length} survivors)`);
         
-        // Distribute prize to ALL survivors (not just the requester)
+        // Distribute prize to ALL winners - add to their wallet balance
         let distributionCount = 0;
-        const distributionResults = [];
         
         for (const winnerId of winners) {
           try {
-            // Credit the prize to user's eyes
-            const user = await User.findById(winnerId);
-            if (user) {
-              user.eyes += prizePerWinner;
-              await user.save();
-              console.log(`[Prize Distribution] Credited ${prizePerWinner} eyes to user ${winnerId}. Total eyes: ${user.eyes}`);
-            }
-            
-            // Also credit wallet for cash rewards
+            // Get winner wallet by userId and credit balance
             const wallet = await Wallet.findOne({ userId: winnerId });
             if (wallet) {
               wallet.balance += prizePerWinner;
@@ -197,27 +190,32 @@ export class GameController {
                 date: new Date(),
               });
               await wallet.save();
-              console.log(`[Prize Distribution] Credited ${prizePerWinner} to wallet for user ${winnerId}. New balance: ${wallet.balance}`);
+              console.log(`[Prize Distribution] Credited ${prizePerWinner} to wallet balance for user ${winnerId}. New balance: ${wallet.balance}`);
               distributionCount++;
-              distributionResults.push({ userId: winnerId, amount: prizePerWinner, success: true });
             } else {
               console.warn(`[Prize Distribution] Wallet not found for user ${winnerId}`);
-              distributionResults.push({ userId: winnerId, amount: 0, success: false, reason: 'wallet_not_found' });
             }
           } catch (err) {
             console.error(`[Prize Distribution] Error distributing to user ${winnerId}:`, err);
-            distributionResults.push({ userId: winnerId, amount: 0, success: false, reason: 'distribution_error' });
           }
         }
         
-        console.log(`[Prize Distribution] Successfully distributed prize to ${distributionCount}/${winners.length} survivors`);
+        console.log(`[Prize Distribution] Successfully distributed prize to ${distributionCount}/${winners.length} winners`);
+        
+        // Mark prize as distributed
+        game.prizeDistributed = true;
+        await game.save();
         
         return res.status(200).json({ 
           success: true, 
-          message: `Prize distributed: ${prizePerWinner} eyes to each of ${winners.length} winner${winners.length > 1 ? 's' : ''}`, 
+          message: `Prize distributed: ${prizePerWinner} eyes to each of ${winners.length} winner${winners.length > 1 ? 's' : ''}`,
           eyesCredited: prizePerWinner,
           finalScore: finalScore || 0,
           totalPrize: game.price,
+          survivors: winners.length,
+          prizePerWinner,
+          distributionCount
+        });
           survivors: winners.length,
           prizePerWinner,
           distributionCount,

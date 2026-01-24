@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
 export interface ISplashAd extends Document {
   imageUrl: string;
@@ -13,23 +13,23 @@ const SplashAdSchema = new Schema<ISplashAd>(
     imageUrl: {
       type: String,
       required: true,
-      default: ''
+      default: "",
     },
     imagePublicId: {
       type: String,
       required: false,
-      default: ''
+      default: "",
     },
     isActive: {
       type: Boolean,
-      default: true
-    }
+      default: true,
+    },
   },
   {
-    timestamps: true
-  }
+    timestamps: true,
+  },
 );
 
-const SplashAd = mongoose.model<ISplashAd>('SplashAd', SplashAdSchema);
+const SplashAd = mongoose.model<ISplashAd>("SplashAd", SplashAdSchema);
 
 export default SplashAd;
