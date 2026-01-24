@@ -383,8 +383,18 @@ export class GameController {
         });
       }
 
+      // Always fetch fresh game data from DB to get latest connectedUsersArray
+      const freshGame = await Game.findById(foundGame._id || foundGame.id || gameId);
+      if (!freshGame) {
+        return res.status(404).json({
+          success: false,
+          message: "Game not found in database",
+        });
+      }
+
       console.log("Found user:", foundUser.name);
-      console.log("Found game:", foundGame.title);
+      console.log("Found game:", freshGame.title);
+      console.log("Fresh connectedUsersArray:", freshGame.connectedUsersArray);
 
       console.log("Time played", timePlayed)
 
