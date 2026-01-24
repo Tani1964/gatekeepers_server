@@ -70,7 +70,9 @@ const initializeWs = (server: http.Server) => {
             // Store user info on the WebSocket connection
             ws.userId = parsedData.userId;
             ws.token = parsedData.token;
-            console.log(`User ${parsedData.userId} authenticated via WebSocket`);
+            console.log(
+              `User ${parsedData.userId} authenticated via WebSocket`,
+            );
             ws.send(
               JSON.stringify({
                 type: "AUTH_SUCCESS",

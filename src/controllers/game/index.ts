@@ -1,6 +1,7 @@
 import { Game } from "../../models/Game";
 import { User } from "../../models/User";
 import { Wallet } from "../../models/Wallet";
+import jwt from "jsonwebtoken";
 
 // Helper to mark users who left/lost so they can't rejoin
 const userGameStatus: Record<
@@ -128,8 +129,27 @@ export class GameController {
   // Debit eyes immediately during gameplay
   async debitEyes(req: any, res: any) {
     try {
-      const userId = req.user.id;
+      // Extract userId from JWT token in Authorization header
+      const token = req.headers.authorization?.split(" ")[1];
+      if (!token) {
+        return res
+          .status(401)
+          .json({ success: false, message: "No authentication token provided" });
+      }
+
+      let userId: string;
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+        userId = decoded.userId;
+      } catch (error) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Invalid or expired token" });
+      }
+
       const { gameId, eyesLost } = req.body;
+
+      console.log(`[Debit Eyes] Request - User: ${userId}, Game: ${gameId}, Eyes to debit: ${eyesLost}`);
 
       if (!eyesLost || eyesLost <= 0) {
         return res
@@ -149,6 +169,7 @@ export class GameController {
         !game.connectedUsersArray ||
         !game.connectedUsersArray.includes(userId)
       ) {
+        console.warn(`[Debit Eyes] User ${userId} not in game ${gameId}`);
         return res
           .status(400)
           .json({ success: false, message: "User not in game" });
@@ -156,20 +177,26 @@ export class GameController {
 
       // Debit eyes from user's account
       const user = await User.findById(userId);
-      if (user) {
-        const previousEyes = user.eyes;
-        user.eyes = Math.max(0, user.eyes - eyesLost); // Prevent negative eyes
-        await user.save();
-        console.log(
-          `[Debit Eyes] Debited ${eyesLost} eyes from user ${userId}. Previous: ${previousEyes}, New: ${user.eyes}`,
-        );
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
       }
+
+      const previousEyes = user.eyes;
+      user.eyes = Math.max(0, user.eyes - eyesLost); // Prevent negative eyes
+      await user.save();
+      
+      console.log(
+        `[Debit Eyes] ✅ Debited ${eyesLost} eyes from user ${userId} (${user.name}). Previous: ${previousEyes}, New: ${user.eyes}`,
+      );
 
       return res.status(200).json({
         success: true,
-        message: "Eyes debited",
+        message: "Eyes debited successfully",
         eyesDebited: eyesLost,
-        remainingEyes: user?.eyes || 0,
+        remainingEyes: user.eyes,
+        previousEyes: previousEyes,
       });
     } catch (error) {
       console.error("[Debit Eyes] Error:", error);
