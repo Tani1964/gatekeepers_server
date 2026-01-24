@@ -66,6 +66,19 @@ const initializeWs = (server: http.Server) => {
 
         // Handle different message types
         switch (parsedData.type) {
+          case "AUTH_HANDSHAKE":
+            // Store user info on the WebSocket connection
+            ws.userId = parsedData.userId;
+            ws.token = parsedData.token;
+            console.log(`User ${parsedData.userId} authenticated via WebSocket`);
+            ws.send(
+              JSON.stringify({
+                type: "AUTH_SUCCESS",
+                payload: "Authentication successful",
+              }),
+            );
+            break;
+
           case "PLAYER_READY":
             await handleWaiting(ws, parsedData, broadcast);
           case "START_GAME":

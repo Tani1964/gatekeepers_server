@@ -37,13 +37,11 @@ export class GameController {
         if (!userGameStatus[gameId]) userGameStatus[gameId] = {};
         userGameStatus[gameId][userId] = "active";
       }
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: "Joined game",
-          connectedUsers: game.connectedUsers,
-        });
+      return res.status(200).json({
+        success: true,
+        message: "Joined game",
+        connectedUsers: game.connectedUsers,
+      });
     } catch (error) {
       return res
         .status(500)
@@ -70,13 +68,11 @@ export class GameController {
         if (!userGameStatus[gameId]) userGameStatus[gameId] = {};
         userGameStatus[gameId][userId] = "left";
       }
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: "Left game",
-          connectedUsers: game.connectedUsers,
-        });
+      return res.status(200).json({
+        success: true,
+        message: "Left game",
+        connectedUsers: game.connectedUsers,
+      });
     } catch (error) {
       return res
         .status(500)
@@ -116,14 +112,12 @@ export class GameController {
         }
       }
 
-      return res
-        .status(200)
-        .json({
-          success: true,
-          message: "Marked as lost",
-          connectedUsers: game.connectedUsers,
-          eyesDebited: eyesLost || 0,
-        });
+      return res.status(200).json({
+        success: true,
+        message: "Marked as lost",
+        connectedUsers: game.connectedUsers,
+        eyesDebited: eyesLost || 0,
+      });
     } catch (error) {
       return res
         .status(500)
@@ -189,9 +183,11 @@ export class GameController {
   async endGameAndDistributePrize(req: any, res: any) {
     try {
       const { gameId, finalScore } = req.body;
-      
-      console.log(`🎁 [Prize Distribution] Starting prize distribution for game: ${gameId}, finalScore: ${finalScore}`);
-      
+
+      console.log(
+        `🎁 [Prize Distribution] Starting prize distribution for game: ${gameId}, finalScore: ${finalScore}`,
+      );
+
       const game = await Game.findById(gameId);
       if (!game)
         return res
