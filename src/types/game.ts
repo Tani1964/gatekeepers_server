@@ -17,6 +17,7 @@ export interface IGame extends Document {
   showFriendImages?: boolean;
   showEnemyImages?: boolean;
   price: number;
+  prizeDistributed?: boolean; // Track if prize has been distributed
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
