@@ -12,7 +12,7 @@ const SplashAdSchema = new Schema<ISplashAd>(
   {
     imageUrl: {
       type: String,
-      required: true,
+      required: false,
       default: "",
     },
     imagePublicId: {

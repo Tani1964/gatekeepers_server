@@ -1,7 +1,7 @@
+import jwt from "jsonwebtoken";
 import { Game } from "../../models/Game";
 import { User } from "../../models/User";
 import { Wallet } from "../../models/Wallet";
-import jwt from "jsonwebtoken";
 
 // Helper to mark users who left/lost so they can't rejoin
 const userGameStatus: Record<
@@ -134,7 +134,10 @@ export class GameController {
       if (!token) {
         return res
           .status(401)
-          .json({ success: false, message: "No authentication token provided" });
+          .json({
+            success: false,
+            message: "No authentication token provided",
+          });
       }
 
       let userId: string;
@@ -149,7 +152,9 @@ export class GameController {
 
       const { gameId, eyesLost } = req.body;
 
-      console.log(`[Debit Eyes] Request - User: ${userId}, Game: ${gameId}, Eyes to debit: ${eyesLost}`);
+      console.log(
+        `[Debit Eyes] Request - User: ${userId}, Game: ${gameId}, Eyes to debit: ${eyesLost}`,
+      );
 
       if (!eyesLost || eyesLost <= 0) {
         return res
@@ -186,7 +191,7 @@ export class GameController {
       const previousEyes = user.eyes;
       user.eyes = Math.max(0, user.eyes - eyesLost); // Prevent negative eyes
       await user.save();
-      
+
       console.log(
         `[Debit Eyes] ✅ Debited ${eyesLost} eyes from user ${userId} (${user.name}). Previous: ${previousEyes}, New: ${user.eyes}`,
       );
