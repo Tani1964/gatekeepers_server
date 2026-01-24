@@ -339,10 +339,14 @@ async function handleEndGame(ws: any, data: any, broadcastToGame: Function) {
       const idx = game.connectedUsersArray.indexOf(userId);
       if (idx !== -1) {
         game.connectedUsersArray.splice(idx, 1);
-        console.log(`Removed user ${userId} from connectedUsersArray (reason: ${reason})`);
+        console.log(
+          `Removed user ${userId} from connectedUsersArray (reason: ${reason})`,
+        );
       }
     } else if (reason === "completed") {
-      console.log(`User ${userId} completed game - keeping in connectedUsersArray as winner`);
+      console.log(
+        `User ${userId} completed game - keeping in connectedUsersArray as winner`,
+      );
     }
 
     // Decrement connected users count

@@ -71,11 +71,13 @@ const userSchema = new Schema<IUser>(
     referrals: {
       type: [{ id: String, createdAt: { type: Date, default: Date.now } }],
     },
-    monthlyDurationPlayed: { // in minutes
+    monthlyDurationPlayed: {
+      // in minutes
       type: Number,
       default: 0,
     },
-    yearlyDurationPlayed: { // in minutes
+    yearlyDurationPlayed: {
+      // in minutes
       type: Number,
       default: 0,
     },
@@ -89,39 +91,41 @@ const userSchema = new Schema<IUser>(
         trim: true,
       },
     ],
-      pushToken: {
-    type: String,
-    default: null,
-  },
-  pushTokens: [{
-    token: String,
-    device: String,
-    lastUsed: Date,
-  }],
-  notificationPreferences: {
-    enabled: {
-      type: Boolean,
-      default: true,
+    pushToken: {
+      type: String,
+      default: null,
     },
-    gameStart: {
-      type: Boolean,
-      default: true,
+    pushTokens: [
+      {
+        token: String,
+        device: String,
+        lastUsed: Date,
+      },
+    ],
+    notificationPreferences: {
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+      gameStart: {
+        type: Boolean,
+        default: true,
+      },
+      gameEnd: {
+        type: Boolean,
+        default: true,
+      },
+      friendActivity: {
+        type: Boolean,
+        default: true,
+      },
     },
-    gameEnd: {
-      type: Boolean,
-      default: true,
-    },
-    friendActivity: {
-      type: Boolean,
-      default: true,
-    },
-  },
   },
   {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 userSchema.virtual("initials").get(function (this: IUser) {
