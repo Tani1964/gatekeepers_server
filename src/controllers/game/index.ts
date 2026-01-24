@@ -87,6 +87,47 @@ export class GameController {
       }
     }
 
+    // Debit eyes immediately during gameplay
+    async debitEyes(req: any, res: any) {
+      try {
+        const userId = req.user.id;
+        const { gameId, eyesLost } = req.body;
+        
+        if (!eyesLost || eyesLost <= 0) {
+          return res.status(400).json({ success: false, message: "Invalid eyes amount" });
+        }
+
+        const game = await Game.findById(gameId);
+        if (!game) {
+          return res.status(404).json({ success: false, message: "Game not found" });
+        }
+
+        // Verify user is in the game
+        if (!game.connectedUsersArray.includes(userId)) {
+          return res.status(400).json({ success: false, message: "User not in game" });
+        }
+
+        // Debit eyes from user's account
+        const user = await User.findById(userId);
+        if (user) {
+          const previousEyes = user.eyes;
+          user.eyes = Math.max(0, user.eyes - eyesLost); // Prevent negative eyes
+          await user.save();
+          console.log(`[Debit Eyes] Debited ${eyesLost} eyes from user ${userId}. Previous: ${previousEyes}, New: ${user.eyes}`);
+        }
+
+        return res.status(200).json({ 
+          success: true, 
+          message: "Eyes debited", 
+          eyesDebited: eyesLost,
+          remainingEyes: user?.eyes || 0
+        });
+      } catch (error) {
+        console.error("[Debit Eyes] Error:", error);
+        return res.status(500).json({ success: false, message: "Error debiting eyes" });
+      }
+    }
+
     // End game and split prize among winners
     async endGameAndDistributePrize(req: any, res: any) {
       try {

@@ -13,6 +13,7 @@ router.post('/submit-score', (req:any,res:any) => gameController.submitScore(req
 router.post('/join', (req:any,res:any) => gameController.joinGame(req,res));
 router.post('/leave', (req:any,res:any) => gameController.leaveGame(req,res));
 router.post('/lose', (req:any,res:any) => gameController.loseGame(req,res));
+router.post('/debit-eyes', (req:any,res:any) => gameController.debitEyes(req,res));
 router.post('/end', (req:any,res:any) => gameController.endGameAndDistributePrize(req,res));
 
 export default router;
