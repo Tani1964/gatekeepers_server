@@ -216,16 +216,12 @@ export class GameController {
           prizePerWinner,
           distributionCount
         });
-          survivors: winners.length,
-          prizePerWinner,
-          distributionCount,
-          distributionResults
-        });
       } catch (error) {
         console.error('[Prize Distribution] Error:', error);
         return res.status(500).json({ success: false, message: "Internal server error", error });
       }
     }
+
   async getUpcomingGames(req: any, res: any) {
     try {
       const now = new Date();
