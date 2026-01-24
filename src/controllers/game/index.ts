@@ -172,28 +172,56 @@ export class GameController {
         const prizePerWinner = Math.floor(game.price / winners.length);
         
         console.log(`[Prize Distribution] Prize per winner: ${prizePerWinner} (${game.price} / ${winners.length} survivors)`);
+        console.log(`[Prize Distribution] Winner IDs:`, winners);
         
         // Distribute prize to ALL winners - add to their wallet balance
         let distributionCount = 0;
         
         for (const winnerId of winners) {
           try {
-            // Get winner wallet by userId and credit balance
+            console.log(`[Prize Distribution] Processing winner: ${winnerId}, type: ${typeof winnerId}`);
+            
+            // Get winner wallet by userId - same pattern as creditWallet function
             const wallet = await Wallet.findOne({ userId: winnerId });
+            
+            console.log(`[Prize Distribution] Wallet found:`, wallet ? `Yes (balance: ${wallet.balance})` : 'No');
+            
             if (wallet) {
+              const previousBalance = wallet.balance;
+              
+              // Credit wallet balance - exactly like creditWallet does
               wallet.balance += prizePerWinner;
-              wallet.transactions.push({
-                amount: prizePerWinner,
-                type: "credit",
+              
+              // Add transaction record - same pattern as creditWallet
+              wallet.transactions.push({ 
+                amount: prizePerWinner, 
+                type: "credit", 
                 description: `Prize for game ${game.title} (${winners.length} survivor${winners.length > 1 ? 's' : ''})`,
                 status: "completed",
-                date: new Date(),
+                date: new Date() 
               });
+              
               await wallet.save();
-              console.log(`[Prize Distribution] Credited ${prizePerWinner} to wallet balance for user ${winnerId}. New balance: ${wallet.balance}`);
+              console.log(`[Prize Distribution] SUCCESS! Credited ${prizePerWinner} to wallet for user ${winnerId}. Previous: ${previousBalance}, New: ${wallet.balance}`);
               distributionCount++;
             } else {
-              console.warn(`[Prize Distribution] Wallet not found for user ${winnerId}`);
+              console.warn(`[Prize Distribution] WALLET NOT FOUND for user ${winnerId} - Creating new wallet`);
+              
+              // Create wallet if it doesn't exist
+              const newWallet = new Wallet({
+                userId: winnerId,
+                balance: prizePerWinner,
+                transactions: [{
+                  amount: prizePerWinner,
+                  type: "credit",
+                  description: `Prize for game ${game.title} (${winners.length} survivor${winners.length > 1 ? 's' : ''})`,
+                  status: "completed",
+                  date: new Date(),
+                }]
+              });
+              await newWallet.save();
+              console.log(`[Prize Distribution] Created new wallet for user ${winnerId} with balance: ${prizePerWinner}`);
+              distributionCount++;
             }
           } catch (err) {
             console.error(`[Prize Distribution] Error distributing to user ${winnerId}:`, err);

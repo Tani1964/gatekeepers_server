@@ -333,13 +333,16 @@ async function handleEndGame(ws: any, data: any, broadcastToGame: Function) {
       return;
     }
 
-    // Remove user from connectedUsersArray if they lost or disconnected
-    if (userId && game.connectedUsersArray) {
+    // Remove user from connectedUsersArray ONLY if they lost or disconnected
+    // Do NOT remove if they completed successfully (they're a winner!)
+    if (userId && game.connectedUsersArray && reason !== "completed") {
       const idx = game.connectedUsersArray.indexOf(userId);
       if (idx !== -1) {
         game.connectedUsersArray.splice(idx, 1);
-        console.log(`Removed user ${userId} from connectedUsersArray`);
+        console.log(`Removed user ${userId} from connectedUsersArray (reason: ${reason})`);
       }
+    } else if (reason === "completed") {
+      console.log(`User ${userId} completed game - keeping in connectedUsersArray as winner`);
     }
 
     // Decrement connected users count
