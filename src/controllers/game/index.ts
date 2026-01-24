@@ -103,7 +103,7 @@ export class GameController {
         }
 
         // Verify user is in the game
-        if (!game.connectedUsersArray.includes(userId)) {
+        if (!game.connectedUsersArray || !game.connectedUsersArray.includes(userId)) {
           return res.status(400).json({ success: false, message: "User not in game" });
         }
 
