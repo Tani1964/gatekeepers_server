@@ -102,6 +102,14 @@ const userSchema = new Schema<IUser>(
         lastUsed: Date,
       },
     ],
+    adsWatchedToday: {
+      type: Number,
+      default: 0,
+    },
+    lastAdWatchReset: {
+      type: Date,
+      default: Date.now,
+    },
     notificationPreferences: {
       enabled: {
         type: Boolean,

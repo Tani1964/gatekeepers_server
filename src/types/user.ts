@@ -26,6 +26,8 @@ export interface IUser extends Document {
   updatedAt: Date;
   pushToken?: string | null;
   pushTokens?: { token: string; device: string; lastUsed: Date }[];
+  adsWatchedToday?: number;
+  lastAdWatchReset?: Date;
   notificationPreferences?: {
     enabled: boolean;
     gameStart: boolean;

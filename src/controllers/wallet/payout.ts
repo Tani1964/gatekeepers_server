@@ -315,3 +315,86 @@ export const verifyAccount = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Record ad watch and update daily count
+export const recordAdWatch = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if we need to reset the daily count (new day)
+    const now = new Date();
+    const lastReset = user.lastAdWatchReset || new Date(0);
+    const hoursSinceReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
+
+    // Reset if more than 24 hours have passed
+    if (hoursSinceReset >= 24) {
+      user.adsWatchedToday = 1;
+      user.lastAdWatchReset = now;
+    } else {
+      user.adsWatchedToday = (user.adsWatchedToday || 0) + 1;
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      adsWatchedToday: user.adsWatchedToday,
+      lastAdWatchReset: user.lastAdWatchReset,
+      message: "Ad watch recorded successfully"
+    });
+  } catch (error: any) {
+    console.error("Record ad watch error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get ad watch status for a user
+export const getAdWatchStatus = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if we need to reset the daily count (new day)
+    const now = new Date();
+    const lastReset = user.lastAdWatchReset || new Date(0);
+    const hoursSinceReset = (now.getTime() - lastReset.getTime()) / (1000 * 60 * 60);
+
+    let adsWatchedToday = user.adsWatchedToday || 0;
+
+    // Reset if more than 24 hours have passed
+    if (hoursSinceReset >= 24) {
+      adsWatchedToday = 0;
+      user.adsWatchedToday = 0;
+      user.lastAdWatchReset = now;
+      await user.save();
+    }
+
+    res.json({
+      success: true,
+      adsWatchedToday,
+      lastAdWatchReset: user.lastAdWatchReset,
+      dailyLimit: 9,
+      remainingAds: Math.max(0, 9 - adsWatchedToday)
+    });
+  } catch (error: any) {
+    console.error("Get ad watch status error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
